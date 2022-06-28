@@ -1,0 +1,47 @@
+import numpy as np
+import Agent
+import networkx as nx
+from Agent import Agent
+from Agent import Param 
+from Aggregator import Aggregator
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import time
+
+if __name__ == '__main__':
+    N=2 # N agents
+    N_iter = 100
+    x_traj = np.zeros((N_iter,2))
+
+
+    agents = []
+    param=Param(is_test=1, N_iter=N_iter)
+    
+    G_comm = nx.complete_graph(N)
+    x0=np.array([10,1])
+
+    sigma= np.array([x0[1] + x0[0]])
+
+    traffic_light = np.zeros((N,1))
+    completed_iteration = -1*np.ones((N,1))
+    lambda_shared = {}
+
+
+    
+    for i in range(N): 
+        agents.append(Agent(i, nx.neighbors(G_comm, i), param, np.array([x0[i]]), lambda_shared))
+    aggregator=Aggregator()
+    for agent in agents:
+        agent.run(lambda_shared, sigma, completed_iteration, traffic_light)
+    aggregator.run(sigma, completed_iteration, traffic_light, agents)
+    
+    while not completed_iteration[0]==N_iter-1:
+        time.sleep(1)
+    fig, ax = plt.subplots(figsize=(5, 2.7), layout='constrained') 
+    for i_agent in range(len(agents)):
+        ax.plot(aggregator.x_traj[i_agent][0, :])  
+    print(completed_iteration)
+    print(agents[0].x)
+    print(agents[1].x)
+    plt.show()
+   
