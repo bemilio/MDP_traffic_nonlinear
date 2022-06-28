@@ -18,13 +18,13 @@ if __name__ == '__main__':
     if use_test_graph:
         N_agents=10   # N agents
         f = open('test_graph.pkl', 'rb')
-        Road_graph, nabla_travel_time = pickle.load(f)
+        Road_graph, travel_time = pickle.load(f)
         f.close()
         T_horiz =8
     else:
         N_agents=60    # N agents
         f = open('manhattan_road_graph.pkl', 'rb')
-        Road_graph, nabla_travel_time = pickle.load(f)
+        Road_graph, travel_time = pickle.load(f)
         f.close()
         T_horiz = 80
 
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     print("Running simulation with ", n_juncs," nodes and", N_agents," agents")
 
     np.random.seed(1)
-    N_iter=600
+    N_iter=1000
     stepsize_primal=0.01
     dual_stepsize = 0.01
     stepsize_hsdm = 0.02
@@ -67,7 +67,6 @@ if __name__ == '__main__':
         alg = FRB_algorithm(game, beta=0.01, alpha=0.01, theta=0.1)
         index_store = 0
         for k in range(N_iter):
-
             alg.run_once()
             if k % 10 == 0:
                 x, d, r  = alg.get_state()

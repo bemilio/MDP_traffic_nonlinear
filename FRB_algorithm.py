@@ -54,6 +54,6 @@ class FRB_algorithm:
         A_i = self.game.A_ineq_shared
         b_i = self.game.b_ineq_shared
         torch.sum(torch.bmm(A_i, self.x) - b_i, 0)
-        dual_transformed = self.dual + torch.sum(torch.bmm(A_i, self.x) - b_i, 0)
+        dual_transformed = torch.maximum(self.dual + torch.sum(torch.bmm(A_i, self.x) - b_i, 0), torch.zeros(self.dual.size()))
         residual = np.sqrt( ((self.x - x_transformed).norm())**2 + ((self.dual-dual_transformed).norm())**2 )
         return residual

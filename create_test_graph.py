@@ -1,6 +1,5 @@
 import networkx as nx
 import numpy as np
-from computeTravelTime import computeTravelTime
 import pickle
 import matplotlib.pyplot as plt
 
@@ -39,7 +38,7 @@ Road_graph.add_edge(11,4)
 Road_graph.add_edge(11,8)
 Road_graph.add_edge(4,11)
 
-travel_time_derivative_roads={} # Linearization factor of the travel time func.
+travel_time_roads={} # Linearization factor of the travel time func.
 capacity_roads={} # Denominator in the travel time function
 limit_roads={} # Used as maximum allowed cars in a road for the shared constraints
 
@@ -67,5 +66,6 @@ nx.set_edge_attributes(Road_graph, values = capacity_roads, name = 'capacity')
 nx.set_edge_attributes(Road_graph, values = limit_roads, name = 'limit_roads')
 
 f= open('test_graph.pkl', 'wb')  
-pickle.dump([Road_graph, nabla_travel_time], f)
+pickle.dump([Road_graph, travel_time], f)
 f.close
+print("Graph created")

@@ -128,12 +128,12 @@ class Game:
         A_ineq_shared = torch.zeros(N, n_shared_ineq_constr, self.n_opt_variables)
         b_ineq_shared = torch.zeros(N, n_shared_ineq_constr, 1)
         i_constr = 0
-        # for t in range(T_horiz):
-        #     for edge in road_graph.edges:
-        #         road_capacity = road_graph[edge[0]][edge[1]]['limit_roads']
-        #         if road_capacity < inf:
-        #             for i_agent in range(N):
-        #                 A_ineq_shared[i_agent, i_constr, self.edge_time_to_index[(edge,t)]] = 1
-        #                 b_ineq_shared[i_agent, i_constr, 0] = road_capacity / N
-        #             i_constr = i_constr + 1
+        for t in range(T_horiz):
+            for edge in road_graph.edges:
+                road_capacity = road_graph[edge[0]][edge[1]]['limit_roads']
+                if road_capacity < inf:
+                    for i_agent in range(N):
+                        A_ineq_shared[i_agent, i_constr, self.edge_time_to_index[(edge,t)]] = 1
+                        b_ineq_shared[i_agent, i_constr, 0] = road_capacity / N
+                    i_constr = i_constr + 1
         return A_ineq_shared, b_ineq_shared
