@@ -44,7 +44,7 @@ limit_roads={} # Used as maximum allowed cars in a road for the shared constrain
 
 node_positions={} # only for drawing
 index=0
-capacity = 10
+capacity = 0.1
 v_free_flow = 1
 travel_time = 1
 for node in Road_graph.nodes:

@@ -47,7 +47,8 @@ class FRB_algorithm:
 
     def get_state(self):
         residual = self.compute_residual()
-        return self.x, self.dual, residual
+        cost = self.game.J(self.x)
+        return self.x, self.dual, residual, cost
 
     def compute_residual(self):
         x_transformed = self.prox(self.x-self.game.F(self.x))

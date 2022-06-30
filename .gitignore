@@ -4,3 +4,7 @@
 saved_test_result.pkl
 test_graph.pkl
 .idea/workspace.xml
+test_graph.pkl
+*.pyc
+*.pyc
+*.pyc
