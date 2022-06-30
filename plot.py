@@ -40,7 +40,7 @@ ax.loglog(np.arange(0, N_iter*10,10), residual[0,:])
 plt.xlabel('Iteration')
 plt.ylabel('Residual')
 plt.legend()
-plt.savefig('Residual.pdf')  
+plt.savefig('Residual.png')
 plt.show()
 plt.grid(True)
 
@@ -68,7 +68,7 @@ nx.draw_networkx_edges(road_graph, pos=pos, edge_color=colors, edgelist = edgeli
 plt.show()
 
 # bar plot of maximum edge congestion compared to constraint
-fig, ax = plt.subplots(2,1, figsize=(5*1.5, 3.6*1.5), layout='constrained')
+fig, ax = plt.subplots(figsize=(5*1.5, 3.6*1.5), layout='constrained')
 congestions = torch.zeros( N_tests, N_edges )
 congestion_baseline = torch.zeros( N_tests, N_edges )
 for i_test in range(N_tests):
@@ -83,53 +83,60 @@ for i_test in range(N_tests):
                 if (edge, t) in congestion_baseline_stored[i_test].keys():
                     congestion_baseline [ i_test, i_edges ] = max( congestion_baseline_stored[i_test][ (edge, t) ], congestion_baseline[ i_test, i_edges ])
             i_edges = i_edges+1
-congestions = congestions[:, 0:i_edges]
+congestions = congestions[:, 0:i_edges] # ignore self-loops
 congestion_baseline = congestion_baseline[:, 0:i_edges]
-plt.axhline(y=1,linewidth=1, color='red', label="Road limit")
-plt.axhline(y=0.5,linewidth=1, color='orange', linestyle='--', label="Free-flow limit")
-if N_tests>=2:
-    ax[0].axhline(y=1, linewidth=1, color='red', label="Road limit")
-    ax[0].axhline(y=0.5, linewidth=1, color='orange', linestyle='--', label="Free-flow limit")
-    ax[0].boxplot(congestions.numpy(), patch_artist=True)
-    ax[1].boxplot(congestion_baseline.numpy(), patch_artist=True)
-else:
-    ax[0,0]= plt.bar([k - 0.2 for k in range(congestions.size(1))], congestions.flatten(), width=0.4, align='center',
-            label="Proposed")
-    ax[0,0] =plt.bar([k + 0.2 for k in range(congestion_baseline.size(1))], congestion_baseline.flatten(), width=0.4, align='center',
-            label="Naive")
-ax[0].grid(True)
-ax[1].grid(True)
-plt.legend(prop={'size': 8})
-ax[1].set_xlabel(r'Edge')
-ax[0].set_ylabel(r'Congestion - proposed')
-ax[1].set_ylabel(r'Congestion - baseline')
-ax[0].set_ylim([0, 1.2])
-ax[1].set_ylim([0, 1.2])
-plt.show(block=False)
-plt.savefig('congestion.pdf')
+congestion_dataframe = pd.DataFrame(columns=['test', 'edge', 'method', 'value'])
+for test in range(N_tests):
+    for edge in range(i_edges):
+        s_row = pd.DataFrame([[test , edge, 'Proposed', congestions[test,edge].item()]], columns=['test', 'edge', 'method', 'value'])
+        congestion_dataframe = congestion_dataframe.append(s_row)
+        s_row = pd.DataFrame([[test , edge, 'Baseline', congestion_baseline[test,edge].item()]], columns=['test', 'edge', 'method', 'value'])
+        congestion_dataframe = congestion_dataframe.append(s_row)
 
-fig, ax = plt.subplots(2,1, figsize=(5*1.5, 3.6*1.5), layout='constrained')
+if N_tests>=2:
+    ax.axhline(y=1, linewidth=1, color='red', label="Road limit")
+    ax.axhline(y=0.5, linewidth=1, color='orange', linestyle='--', label="Free-flow limit")
+    ax = sns.boxplot(x="edge", y="value", hue="method", data=congestion_dataframe, palette="Set3")
+else:
+    plt.axhline(y=1, linewidth=1, color='red', label="Road limit")
+    plt.axhline(y=0.5, linewidth=1, color='orange', linestyle='--', label="Free-flow limit")
+    ax= plt.bar([k - 0.2 for k in range(congestions.size(1))], congestions.flatten(), width=0.4, align='center',
+            label="Proposed")
+    ax =plt.bar([k + 0.2 for k in range(congestion_baseline.size(1))], congestion_baseline.flatten(), width=0.4, align='center',
+            label="Naive")
+ax.grid(True)
+plt.legend(prop={'size': 8})
+ax.set_xlabel(r'Edge')
+ax.set_ylabel(r'Congestion')
+ax.set_ylim([-0.1, 1.2])
+
+plt.show(block=False)
+plt.savefig('congestion.png')
+
+fig, ax = plt.subplots(figsize=(5*1.5, 3.6*1.5), layout='constrained')
 costs_baseline = torch.zeros( N_tests, N_agents )
 for i_test in range(N_tests):
     costs_baseline[i_test, :] = cost_baseline_stored[i_test]
+costs_dataframe = pd.DataFrame(columns=['test', 'agent', 'method', 'value'])
+for test in range(N_tests):
+    for agent in range(N_agents):
+        s_row = pd.DataFrame([[test , agent, 'Proposed', cost[test,agent].item()]], columns=['test', 'agent', 'method', 'value'])
+        costs_dataframe = costs_dataframe.append(s_row)
+        s_row = pd.DataFrame([[test , agent, 'Baseline', costs_baseline[test,agent].item()]], columns=['test', 'agent', 'method', 'value'])
+        costs_dataframe = costs_dataframe.append(s_row)
 if N_tests>=2:
-    ax[0].boxplot(cost.numpy(), patch_artist=True)
-    ax[1].boxplot(costs_baseline.numpy(), patch_artist=True)
+    ax = sns.boxplot(x="agent", y="value", hue="method", data=costs_dataframe, palette="Set3")
 else:
     plt.bar([k - 0.2 for k in range(cost.size(1))], cost.flatten(), width=0.4, align='center',
             label="Proposed")
     plt.bar([k + 0.2 for k in range(costs_baseline.size(1))], costs_baseline.flatten(), width=0.4, align='center',
-            label="Naive")
-ax[0].grid(True)
-ax[1].grid(True)
-ax[1].set_xlabel(r'Agent')
-ax[0].set_ylabel(r'Cost - proposed')
-ax[0].set_ylim([0, 15])
-ax[1].set_ylim([0, 15])
-ax[1].set_ylabel(r'Cost - baseline')
+            label="Baseline")
+ax.grid(True)
+
+ax.set_ylabel(r'Cost')
+ax.set_ylim([0, 15])
+
 plt.legend(prop={'size': 8})
-plt.savefig('cost.pdf')
-
-
-plt.show(block=True)
+plt.show(block=False)
+plt.savefig('cost.png')
 print("Done")
