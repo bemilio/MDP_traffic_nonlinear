@@ -1,3 +1,5 @@
+import warnings
+
 import torch
 from qpth.qp import QPFunction, QPSolvers
 import numpy as np
@@ -44,5 +46,7 @@ class BackwardStep(torch.nn.Module):
             q2_n = q2[n,:,:].numpy()
             m.setup(P=self.Q[n], q=q2_n, A=self.A_ineq[n], l=self.lower[n], u=self.upper[n], verbose=False, warm_start=False, max_iter=3000, eps_abs=10**(-6), eps_rel=10**(-6))
             results = m.solve()
+            if results.info.status != 'solved':
+                print("[BackwardStep]: OSQP did not solve correctly, OSQP status:" + results.info.status)
             y[n,:,:] = torch.from_numpy(np.transpose(np.matrix(results.x)))
         return y

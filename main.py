@@ -9,7 +9,7 @@ import time
 if __name__ == '__main__':
 
     use_test_graph = True
-    N_random_tests = 50
+    N_random_tests = 1
     print("Initializing road graph...")
     if use_test_graph:
         N_agents=15   # N agents
@@ -29,7 +29,7 @@ if __name__ == '__main__':
     print("Running simulation with ", n_juncs," nodes and", N_agents," agents")
 
     np.random.seed(1)
-    N_iter=3000
+    N_iter=2000
     stepsize_primal=0.01
     dual_stepsize = 0.01
     stepsize_hsdm = 0.02
@@ -44,6 +44,9 @@ if __name__ == '__main__':
     congestion_baseline={}
     cost_baseline={}
 
+    initial_junctions_stored = {}
+    final_destinations_stored = {}
+
     for test in range(N_random_tests):
         # Change start-destination
         initial_junctions = np.random.randint(0, high=n_juncs, size=(N_agents))
@@ -53,6 +56,8 @@ if __name__ == '__main__':
             while initial_junctions[i] == final_destinations[i] or not nx.has_path(Road_graph, initial_junctions[i], final_destinations[i]):
                 initial_junctions[i]= np.random.randint(0, high=n_juncs - 1)
                 final_destinations[i] = np.random.randint(0, high=n_juncs - 1)
+        initial_junctions_stored.update({test:initial_junctions})
+        final_destinations_stored.update({test:final_destinations})
     ###############################
         print("Initializing game for test " + str(test) + " out of " +str(N_random_tests))
         game = Game(T_horiz, N_agents, Road_graph, initial_junctions, final_destinations, epsilon_probability=0.05)
@@ -97,7 +102,9 @@ if __name__ == '__main__':
     if torch.max(torch.abs(eq_constr_eval)) >= tol:
         print("Equality constraints not satisfied by " + str(torch.max(torch.abs(eq_constr_eval)) ) )
 
+    print("Saving results...")
     f = open('saved_test_result.pkl', 'wb')
     pickle.dump([x_store, dual_store, residual_store, cost_store, Road_graph, game.edge_time_to_index, game.node_time_to_index, T_horiz, \
-                 initial_junctions, final_destinations, congestion_baseline, cost_baseline], f)
+                 initial_junctions_stored, final_destinations_stored, congestion_baseline, cost_baseline], f)
     f.close
+    print("Saved")

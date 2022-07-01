@@ -86,8 +86,8 @@ class Game:
 
         E = road_graph.number_of_edges()
         V = road_graph.number_of_nodes()
-        # Num of local constr: evolution (TV), M definition ((T-1)V), self loops ban (V-1)T, initial state (1)
-        n_local_const_eq =  T_horiz * V + (T_horiz-1) * V + (V - 1) * T_horiz + 1
+        # Num of local constr: evolution (TV), M definition ((T-1)V), self loops ban (V-1)T, initial state (2)
+        n_local_const_eq =  T_horiz * V + (T_horiz-1) * V + (V - 1) * T_horiz + 2
         A_eq_loc_const = torch.zeros(N, n_local_const_eq, self.n_opt_variables)
         b_eq_loc_const = torch.zeros(N, n_local_const_eq, 1)
         # Num of local inequality constraints: Probability are positive (n_opt_variables), final constraint(1)
@@ -129,6 +129,12 @@ class Game:
                 A_eq_loc_const[i_agent, i_constr_eq, self.edge_time_to_index[(edge, 0)]] = 1
             b_eq_loc_const[i_agent, i_constr_eq, 0] = 1
             i_constr_eq = i_constr_eq + 1
+            # Initial state cont.
+            # set to 0 all transition probabilities NOT from the initial state - this is needed
+            for edge in road_graph.edges:
+                if edge not in road_graph.out_edges(initial_junctions[i_agent]):
+                    A_eq_loc_const[i_agent, i_constr_eq, self.edge_time_to_index[(edge, 0)]] = 1
+            i_constr_eq = i_constr_eq + 1
 
             ### Inequality constraints
             i_constr_ineq = 0
@@ -141,6 +147,7 @@ class Game:
                 i_agent, i_constr_ineq, self.node_time_to_index[(final_destinations[i_agent], T_horiz)]] = -1
             b_ineq_loc_const[
                 i_agent, i_constr_ineq, 0] = - (1-self.epsilon_probability)
+            i_constr_ineq = i_constr_ineq + 1
         return A_ineq_loc_const, b_ineq_loc_const, A_eq_loc_const, b_eq_loc_const
 
     def define_shared_constraints(self, T_horiz, N, road_graph):
@@ -177,7 +184,6 @@ class Game:
             shortest_paths.update({i_agent: nx.shortest_path(self.road_graph,  source=self.initial_junctions[i_agent],\
                              target = self.final_destinations[i_agent], weight='travel_time' )})
         congestion = {}
-
         for i_agent in range(self.N_agents):
             for t in range(len(shortest_paths[i_agent])-1):
                 for edge in self.road_graph.edges:
@@ -190,7 +196,7 @@ class Game:
         for i_agent in range(self.N_agents):
             for t in range(len(shortest_paths[i_agent])-1):
                 edge_taken = (shortest_paths[i_agent][t], shortest_paths[i_agent][t+1])
-                capacity_edge =  self.road_graph[edge_taken[0]][edge_taken[1]]['capacity']
+                capacity_edge = self.road_graph[edge_taken[0]][edge_taken[1]]['capacity']
                 cost_edge = self.road_graph[edge_taken[0]][edge_taken[1]]['travel_time'] * ( 1 + 0.15 * (congestion[(edge_taken,t)]/capacity_edge)**4 )
                 cost_incurred[i_agent] = cost_incurred[i_agent] + cost_edge
         return congestion, cost_incurred
