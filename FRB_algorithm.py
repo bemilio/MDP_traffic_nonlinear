@@ -7,7 +7,7 @@ torch.set_default_dtype(torch.float64)
 
 # For aggregative monotone games
 class FRB_algorithm:
-    def __init__(self, game, x_0=None, dual_0=None, beta = 0.001, alpha = 0.001, theta= 0.1):
+    def __init__(self, game, x_0=None, dual_0=None, beta = 0.001, alpha = 0.001, theta= 0.2):
         self.game = game
         self.alpha = alpha
         self.theta = theta
@@ -27,7 +27,9 @@ class FRB_algorithm:
         self.dual_last = self.dual
         Q = torch.zeros(N_agents, n, n) # Local cost is zero
         q = torch.zeros(N_agents, n, 1)
-        self.prox = backwardStep.BackwardStep(Q, q, game.A_ineq_loc, game.b_ineq_loc, game.A_eq_loc, game.b_eq_loc, 1, index_soft_constraints=game.index_soft_constraints)
+        self.prox = backwardStep.BackwardStep(Q, q, game.A_ineq_loc, game.b_ineq_loc, game.A_eq_loc, game.b_eq_loc, self.alpha, index_soft_constraints=game.index_soft_constraints)
+        self.projection = backwardStep.BackwardStep(Q, q, game.A_ineq_loc, game.b_ineq_loc, game.A_eq_loc, game.b_eq_loc,
+                                              1, index_soft_constraints=game.index_soft_constraints)
 
     def run_once(self):
         x = self.x
@@ -51,6 +53,7 @@ class FRB_algorithm:
         return self.x, self.dual, residual, cost
 
     def compute_residual(self):
+
         x_transformed, status = self.prox(self.x-self.game.F(self.x))
         A_i = self.game.A_ineq_shared
         b_i = self.game.b_ineq_shared

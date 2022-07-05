@@ -11,7 +11,7 @@ from operator import itemgetter
 if __name__ == '__main__':
     logging.basicConfig(filename='log.txt', filemode='w',level=logging.DEBUG)
     use_test_graph = True
-    N_random_tests = 3
+    N_random_tests = 100
     print("Initializing road graph...")
     if use_test_graph:
         N_agents=20   # N agents
@@ -31,7 +31,7 @@ if __name__ == '__main__':
     print("Running simulation with ", n_juncs," nodes and", N_agents," agents")
 
     np.random.seed(1)
-    N_iter=30
+    N_iter=500
     stepsize_primal=0.01
     dual_stepsize = 0.01
     stepsize_hsdm = 0.02
@@ -72,14 +72,16 @@ if __name__ == '__main__':
             logging.info("Initializing game for timestep " + str(t+1) + " out of " + str(T_horiz))
             game = Game(T_horiz-t, N_agents, Road_graph, initial_junctions, final_destinations, epsilon_probability=0.01)
             print("Done")
-            alg = FRB_algorithm(game, beta=0.01, alpha=0.01, theta=0.1)
+            alg = FRB_algorithm(game, beta=0.01, alpha=0.1, theta=0.25)
             status = alg.check_feasibility()
             if status != 'solved':
                 print("The problem is not feasible, status: " + status + ", skipping test...")
+                logging.info("The problem is not feasible, status: " + status + ", skipping test...")
                 is_feasible[test, 0] = 0
                 break
             else:
                 print("The problem is feasible")
+                logging.info("The problem is feasible")
                 is_feasible[test, 0] = 1
             index_store = 0
             avg_time_per_it = 0

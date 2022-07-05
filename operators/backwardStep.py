@@ -14,10 +14,10 @@ class BackwardStep(torch.nn.Module):
     # min 1/2 x'Qx + x'q + alpha/2|| x-x0 ||^2 ; x\in Ax<=b
     def __init__(self, Q, q, A_ineq, b_ineq, A_eq, b_eq, alpha=1, solver='OSQP', index_soft_constraints = None, soft_const_penalty = 1000):
         super().__init__()
-        eps = 0.0001
+        eps = 0.00001
         if solver == 'OSQP':
 
-            Q = torch.add(Q, alpha * torch.from_numpy(np.eye(Q.size(1))))  # batched sum
+            Q = torch.add(alpha * Q,  torch.from_numpy(np.eye(Q.size(1))))  # batched sum
             self.Q=[]
             self.A_ineq = []
             self.b_ineq = []
@@ -53,7 +53,7 @@ class BackwardStep(torch.nn.Module):
             pad = torch.nn.ConstantPad2d((0, 0, 0, self.n_soft_constraints), soft_const_penalty)
             self.q = pad(q)
         if solver == 'QPTH':
-            self.Q = torch.add(Q, alpha * torch.from_numpy(np.eye(Q.size(1))))  # batched sum
+            self.Q = torch.add(alpha *Q, torch.from_numpy(np.eye(Q.size(1))))  # batched sum
             self.q = q
             self.A_ineq = torch.cat( (torch.cat( (A_ineq, A_eq), 1) , -A_eq ), 1)
             self.b_ineq = torch.cat( (torch.cat( (b_ineq, b_eq + eps), 1), -b_eq ), 1)
@@ -63,25 +63,29 @@ class BackwardStep(torch.nn.Module):
 
     def forward(self, x):
         pad = torch.nn.ConstantPad2d((0, 0, 0, self.n_soft_constraints), 0)
-        q2 = torch.add(self.q,  - self.alpha * pad(x)) # Batched sum
+        q2 = torch.add(self.alpha * self.q,  - pad(x)) # Batched sum
         # y = QPFunction(eps=1e-6, verbose=1, maxIter=10, check_Q_spd=False)(self.Q, q2.flatten(1), self.A_ineq, self.b_ineq.flatten(1), self.A_eq, self.b_eq)
         # return y.unsqueeze(2)
 
         y=torch.zeros(x.size())
+        flag_soft = False
         for n in range(x.size(0)):
             m = osqp.OSQP()
             q2_n = q2[n,:,:].numpy()
-            m.setup(P=self.Q[n], q=q2_n, A=self.A_ineq[n], l=self.lower[n], u=self.upper[n], verbose=False, warm_start=False, max_iter=3000, eps_abs=10**(-6), eps_rel=10**(-6))
+            m.setup(P=self.Q[n], q=q2_n, A=self.A_ineq[n], l=self.lower[n], u=self.upper[n], verbose=False, warm_start=False, max_iter=50000, eps_abs=10**(-7), eps_rel=10**(-7))
             results = m.solve()
-            if results.info.status != 'solved':
+            if results.info.status != 'solved' and results.info.status != 'maximum iterations reached':
                 print("[BackwardStep]: OSQP did not solve correctly, OSQP status:" + results.info.status)
                 logging.info("[BackwardStep]: OSQP did not solve correctly, OSQP status:" + results.info.status)
             else:
                 if self.n_soft_constraints>0:
                     if np.any(np.transpose(np.matrix(results.x))[-self.n_soft_constraints:,:] >0.0001 ) :
-                        print("[BackwardStep]: Warning: soft constraints are not satisfied, the solution is approximated")
-                        logging.info("[BackwardStep]: Warning: soft constraints are not satisfied, the solution is approximated")
+                        flag_soft = True
+
                     y[n,:,:] = torch.from_numpy(np.transpose(np.matrix(results.x))[0:-self.n_soft_constraints,:] )
                 else:
                     y[n,:,:] = torch.from_numpy(np.transpose(np.matrix(results.x)))
+        # if flag_soft:
+        #     print("[BackwardStep]: Warning: soft constraints are not satisfied, the solution is approximated")
+        #     logging.info("[BackwardStep]: Warning: soft constraints are not satisfied, the solution is approximated")
         return y, results.info.status,
