@@ -8,6 +8,5 @@
 cd $PBS_O_WORKDIR
 
 # Run
-rm -f log.txt
-source mdp_env/bin/activate
-python3 main.py > log.txt
+source ~/venv_MDP/bin/activate
+python main.py

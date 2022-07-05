@@ -1,3 +1,4 @@
+import logging
 import warnings
 
 import torch
@@ -48,5 +49,6 @@ class BackwardStep(torch.nn.Module):
             results = m.solve()
             if results.info.status != 'solved':
                 print("[BackwardStep]: OSQP did not solve correctly, OSQP status:" + results.info.status)
+                logging.info("[BackwardStep]: OSQP did not solve correctly, OSQP status:" + results.info.status)
             y[n,:,:] = torch.from_numpy(np.transpose(np.matrix(results.x)))
         return y
