@@ -11,7 +11,7 @@ from operator import itemgetter
 if __name__ == '__main__':
     logging.basicConfig(filename='log.txt', filemode='w',level=logging.DEBUG)
     use_test_graph = True
-    N_random_tests = 100
+    N_random_tests = 3
     print("Initializing road graph...")
     if use_test_graph:
         N_agents=20   # N agents
@@ -49,6 +49,8 @@ if __name__ == '__main__':
     initial_junctions_stored = {}
     final_destinations_stored = {}
 
+    is_feasible = torch.zeros(N_random_tests, 1)
+
     visited_nodes = torch.zeros(N_random_tests, N_agents, T_horiz+1)
 
     for test in range(N_random_tests):
@@ -63,14 +65,22 @@ if __name__ == '__main__':
         initial_junctions_stored.update({test:initial_junctions})
         final_destinations_stored.update({test:final_destinations})
         visited_nodes[test, :, 0] = torch.from_numpy(initial_junctions)
-        print("Test " + str(test) + " out of " + str(N_random_tests))
-        logging.info("Test " + str(test) + " out of " + str(N_random_tests) )
+        print("Test " + str(test+1) + " out of " + str(N_random_tests))
+        logging.info("Test " + str(test+1) + " out of " + str(N_random_tests) )
         for t in range(T_horiz):
             print("Initializing game for timestep " + str(t+1) + " out of " + str(T_horiz))
             logging.info("Initializing game for timestep " + str(t+1) + " out of " + str(T_horiz))
-            game = Game(T_horiz-t, N_agents, Road_graph, initial_junctions, final_destinations, epsilon_probability=0.05)
+            game = Game(T_horiz-t, N_agents, Road_graph, initial_junctions, final_destinations, epsilon_probability=0.01)
             print("Done")
             alg = FRB_algorithm(game, beta=0.01, alpha=0.01, theta=0.1)
+            status = alg.check_feasibility()
+            if status != 'solved':
+                print("The problem is not feasible, status: " + status + ", skipping test...")
+                is_feasible[test, 0] = 0
+                break
+            else:
+                print("The problem is feasible")
+                is_feasible[test, 0] = 1
             index_store = 0
             avg_time_per_it = 0
             for k in range(N_iter):
@@ -103,7 +113,7 @@ if __name__ == '__main__':
     logging.info("Saving results...")
     f = open('saved_test_result_multiperiod.pkl', 'wb')
     pickle.dump([ visited_nodes, Road_graph, game.edge_time_to_index, game.node_time_to_index, T_horiz, \
-                 initial_junctions_stored, final_destinations_stored, congestion_baseline, cost_baseline], f)
+                 initial_junctions_stored, final_destinations_stored, congestion_baseline, cost_baseline, is_feasible], f)
     f.close
     print("Saved")
     logging.info("Saved, job done")

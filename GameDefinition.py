@@ -27,7 +27,7 @@ class Game:
                 index_x = index_x + 1
         self.n_opt_variables = T_horiz * (road_graph.number_of_edges() + road_graph.number_of_nodes())
         # Local constraints
-        self.A_ineq_loc, self.b_ineq_loc, self.A_eq_loc, self.b_eq_loc = \
+        self.A_ineq_loc, self.b_ineq_loc, self.A_eq_loc, self.b_eq_loc, self.index_soft_constraints = \
             self.define_local_constraints(T_horiz, N, road_graph, initial_junctions, final_destinations)
         self.A_ineq_loc = self.A_ineq_loc
         self.A_eq_loc  = self.A_eq_loc
@@ -95,7 +95,7 @@ class Game:
         n_local_const_ineq = self.n_opt_variables + 1
         A_ineq_loc_const = torch.zeros(N, n_local_const_ineq, self.n_opt_variables)
         b_ineq_loc_const = torch.zeros(N, n_local_const_ineq, 1)
-
+        index_soft_constraints = torch.zeros(N, 1)
         for junc in road_graph.nodes:
             if not road_graph.has_edge(junc, junc):
                 raise ValueError('The provided graph must have self loops at every junction.')
@@ -143,13 +143,14 @@ class Game:
             A_ineq_loc_const[i_agent, i_constr_ineq:i_constr_ineq + self.n_opt_variables, i_constr_ineq:i_constr_ineq + self.n_opt_variables] = \
                 -torch.from_numpy(np.eye(self.n_opt_variables))
             i_constr_ineq = i_constr_ineq + self.n_opt_variables
-            # Final state
+            # Final state (Softened to avoid infeasibility)
             A_ineq_loc_const[
                 i_agent, i_constr_ineq, self.node_time_to_index[(final_destinations[i_agent], T_horiz)]] = -1
             b_ineq_loc_const[
                 i_agent, i_constr_ineq, 0] = - (1-self.epsilon_probability)
+            index_soft_constraints[i_agent, 0] = i_constr_ineq
             i_constr_ineq = i_constr_ineq + 1
-        return A_ineq_loc_const, b_ineq_loc_const, A_eq_loc_const, b_eq_loc_const
+        return A_ineq_loc_const, b_ineq_loc_const, A_eq_loc_const, b_eq_loc_const, index_soft_constraints
 
     def define_shared_constraints(self, T_horiz, N, road_graph):
         # n shared constraints: capacity of roads (n_edges * T)
@@ -201,3 +202,4 @@ class Game:
                 cost_edge = self.road_graph[edge_taken[0]][edge_taken[1]]['travel_time'] * ( 1 + 0.15 * (congestion[(edge_taken,t)]/capacity_edge)**4 )
                 cost_incurred[i_agent] = cost_incurred[i_agent] + cost_edge
         return congestion, cost_incurred
+

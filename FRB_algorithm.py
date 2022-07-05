@@ -27,7 +27,7 @@ class FRB_algorithm:
         self.dual_last = self.dual
         Q = torch.zeros(N_agents, n, n) # Local cost is zero
         q = torch.zeros(N_agents, n, 1)
-        self.prox = backwardStep.BackwardStep(Q, q, game.A_ineq_loc, game.b_ineq_loc, game.A_eq_loc, game.b_eq_loc, 1)
+        self.prox = backwardStep.BackwardStep(Q, q, game.A_ineq_loc, game.b_ineq_loc, game.A_eq_loc, game.b_eq_loc, 1, index_soft_constraints=game.index_soft_constraints)
 
     def run_once(self):
         x = self.x
@@ -35,7 +35,7 @@ class FRB_algorithm:
         A_i = self.game.A_ineq_shared
         b_i = self.game.b_ineq_shared
         r = 2 * self.game.F(x) - self.game.F(self.x_last)
-        x_new = self.prox(x - self.alpha * (r + torch.matmul(torch.transpose(A_i, 1, 2), self.dual )) + self.theta * (x - self.x_last))
+        x_new, status = self.prox(x - self.alpha * (r + torch.matmul(torch.transpose(A_i, 1, 2), self.dual )) + self.theta * (x - self.x_last))
         d = 2 * torch.bmm(A_i, x_new) - torch.bmm(A_i, x) - b_i
         self.x_last = x
         self.x = x_new
@@ -51,10 +51,37 @@ class FRB_algorithm:
         return self.x, self.dual, residual, cost
 
     def compute_residual(self):
-        x_transformed = self.prox(self.x-self.game.F(self.x))
+        x_transformed, status = self.prox(self.x-self.game.F(self.x))
         A_i = self.game.A_ineq_shared
         b_i = self.game.b_ineq_shared
         torch.sum(torch.bmm(A_i, self.x) - b_i, 0)
         dual_transformed = torch.maximum(self.dual + torch.sum(torch.bmm(A_i, self.x) - b_i, 0), torch.zeros(self.dual.size()))
         residual = np.sqrt( ((self.x - x_transformed).norm())**2 + ((self.dual-dual_transformed).norm())**2 )
         return residual
+
+    def check_feasibility(self):
+        n_local_ineq_constr = self.game.A_ineq_loc.size(1)
+        n_local_eq_constr = self.game.A_eq_loc.size(1)
+        A_ineq_all = torch.zeros(
+            (1, self.game.N_agents * n_local_ineq_constr + self.game.n_shared_ineq_constr, self.game.N_agents * self.game.n_opt_variables))
+        b_ineq_all = torch.zeros((1, self.game.N_agents * n_local_ineq_constr + self.game.n_shared_ineq_constr, 1))
+        A_eq_all = torch.zeros(
+            (1, self.game.N_agents * n_local_eq_constr + self.game.n_shared_ineq_constr, self.game.N_agents * self.game.n_opt_variables))
+        b_eq_all = torch.zeros((1, self.game.N_agents * n_local_eq_constr + self.game.n_shared_ineq_constr, 1))
+        for i in range(self.game.N_agents):
+            A_ineq_all[0,i * n_local_ineq_constr:(i + 1) * n_local_ineq_constr,
+                i * self.game.n_opt_variables:(i + 1) * self.game.n_opt_variables] = self.game.A_ineq_loc[i, :, :]
+            b_ineq_all[0,i * n_local_ineq_constr:(i + 1) * n_local_ineq_constr, :] = self.game.b_ineq_loc[i, :, :]
+            A_eq_all[0,i * n_local_eq_constr:(i + 1) * n_local_eq_constr,
+                i * self.game.n_opt_variables:(i + 1) * self.game.n_opt_variables] = self.game.A_eq_loc[i, :, :]
+            b_eq_all[0,i * n_local_eq_constr:(i + 1) * n_local_eq_constr, :] = self.game.b_eq_loc[i, :, :]
+            A_ineq_all[0,-self.game.n_shared_ineq_constr:,
+                i * self.game.n_opt_variables:(i + 1) * self.game.n_opt_variables] = self.game.A_ineq_shared[i, :, :]
+            b_ineq_all[0,-self.game.n_shared_ineq_constr:, :] = b_ineq_all[0,-self.game.n_shared_ineq_constr:,
+                                                              :] + self.game.b_ineq_shared[i, :, :]
+            Q = torch.zeros(1, self.game.N_agents * self.game.n_opt_variables, self.game.N_agents * self.game.n_opt_variables)
+            q = torch.zeros(1, self.game.N_agents * self.game.n_opt_variables, 1)
+            proj = backwardStep.BackwardStep(Q,q, A_ineq_all, b_ineq_all, A_eq_all, b_eq_all)
+            x,status = proj(torch.zeros(1,self.game.N_agents * self.game.n_opt_variables, 1))
+
+            return status
