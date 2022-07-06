@@ -11,7 +11,7 @@ from operator import itemgetter
 if __name__ == '__main__':
     logging.basicConfig(filename='log.txt', filemode='w',level=logging.DEBUG)
     use_test_graph = True
-    N_random_tests = 100
+    N_random_tests = 30
     print("Initializing road graph...")
     if use_test_graph:
         N_agents=20   # N agents
@@ -31,7 +31,7 @@ if __name__ == '__main__':
     print("Running simulation with ", n_juncs," nodes and", N_agents," agents")
 
     np.random.seed(1)
-    N_iter=500
+    N_iter=300
     stepsize_primal=0.01
     dual_stepsize = 0.01
     stepsize_hsdm = 0.02
@@ -62,8 +62,8 @@ if __name__ == '__main__':
             while initial_junctions[i] == final_destinations[i] or not nx.has_path(Road_graph, initial_junctions[i], final_destinations[i]):
                 initial_junctions[i]= np.random.randint(0, high=n_juncs - 1)
                 final_destinations[i] = np.random.randint(0, high=n_juncs - 1)
-        initial_junctions_stored.update({test:initial_junctions})
-        final_destinations_stored.update({test:final_destinations})
+        initial_junctions_stored.update({test:initial_junctions.copy()})
+        final_destinations_stored.update({test:final_destinations.copy()})
         visited_nodes[test, :, 0] = torch.from_numpy(initial_junctions)
         print("Test " + str(test+1) + " out of " + str(N_random_tests))
         logging.info("Test " + str(test+1) + " out of " + str(N_random_tests) )
@@ -107,9 +107,10 @@ if __name__ == '__main__':
                 prob_dist = torch.maximum(x[i_agent, indexes], torch.tensor([0])).flatten()  / torch.sum(torch.maximum(x[i_agent, indexes], torch.tensor([0])))
                 initial_junctions[i_agent] = np.random.choice(range(n_juncs), p=prob_dist)
                 visited_nodes[test, :, t+1] = torch.from_numpy(initial_junctions)
-        congestion_baseline_instance, cost_baseline_instance = game.compute_baseline() # Compute cost of naive shortest path
-        congestion_baseline.update({test : congestion_baseline_instance})
-        cost_baseline.update({test : cost_baseline_instance.flatten(0)})
+            if t==0:
+                congestion_baseline_instance, cost_baseline_instance = game.compute_baseline() # Compute cost of naive shortest path
+                congestion_baseline.update({test : congestion_baseline_instance})
+                cost_baseline.update({test : cost_baseline_instance.flatten(0)})
 
     print("Saving results...")
     logging.info("Saving results...")
