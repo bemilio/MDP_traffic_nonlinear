@@ -32,10 +32,6 @@ if __name__ == '__main__':
 
     np.random.seed(1)
     N_iter=300
-    stepsize_primal=0.01
-    dual_stepsize = 0.01
-    stepsize_hsdm = 0.02
-    exponent_hsdm = 0.8
     # containers for saved variables
     x_hsdm={}
     x_not_hsdm={}

@@ -1,5 +1,3 @@
-from functools import total_ordering
-from re import X
 import matplotlib as mpl
 import seaborn as sns
 import pandas as pd
