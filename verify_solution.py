@@ -11,7 +11,7 @@ f = open('saved_test_result.pkl', 'rb')
 ## dual: Tensor with dimension (n. random tests, n constraints, )
 ## Residual: Tensor with dimension (n. random tests, K iterations)
 x, dual, residual, cost, road_graph, edge_time_to_index, node_time_to_index, T_horiz, initial_junctions, final_destinations, \
-    congestion_baseline_stored, cost_baseline_stored = pickle.load(f)
+    congestion_baseline_stored, cost_baseline_stored, is_feasible = pickle.load(f)
 f.close()
 
 N_tests = x.size(0)

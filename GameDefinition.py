@@ -77,7 +77,7 @@ class Game:
             sigma_3rd = torch.pow(sigma, 3)
             sigma_4th = torch.pow(sigma, 4)
             ell = torch.add( self.tau, torch.mul(self.k, sigma_4th)) # l(sigma) where l is capacity
-            nabla_ell = torch.mul( torch.mul(self.k, sigma_3rd) , 4/self.N) # \nabla l(sigma)
+            nabla_ell = torch.mul( torch.mul(self.k, sigma_3rd) , 4) # \nabla l(sigma)
             # \nabla_{x_i} J_i = ell(sigma) + (x_i/N) \nabla_{sigma} ell(sigma)
             return torch.add(ell, torch.mul(x/self.N, nabla_ell))
 

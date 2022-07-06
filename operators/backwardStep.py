@@ -14,7 +14,7 @@ class BackwardStep(torch.nn.Module):
     # min 1/2 x'Qx + x'q + alpha/2|| x-x0 ||^2 ; x\in Ax<=b
     def __init__(self, Q, q, A_ineq, b_ineq, A_eq, b_eq, alpha=1, solver='OSQP', index_soft_constraints = None, soft_const_penalty = 1000):
         super().__init__()
-        eps = 0.00001
+        eps = 0.000001
         if solver == 'OSQP':
 
             Q = torch.add(alpha * Q,  torch.from_numpy(np.eye(Q.size(1))))  # batched sum
@@ -72,7 +72,7 @@ class BackwardStep(torch.nn.Module):
         for n in range(x.size(0)):
             m = osqp.OSQP()
             q2_n = q2[n,:,:].numpy()
-            m.setup(P=self.Q[n], q=q2_n, A=self.A_ineq[n], l=self.lower[n], u=self.upper[n], verbose=False, warm_start=False, max_iter=50000, eps_abs=10**(-7), eps_rel=10**(-7))
+            m.setup(P=self.Q[n], q=q2_n, A=self.A_ineq[n], l=self.lower[n], u=self.upper[n], verbose=False, warm_start=False, max_iter=50000, eps_abs=10**(-8), eps_rel=10**(-8))
             results = m.solve()
             if results.info.status != 'solved' and results.info.status != 'maximum iterations reached':
                 print("[BackwardStep]: OSQP did not solve correctly, OSQP status:" + results.info.status)

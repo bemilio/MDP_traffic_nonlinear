@@ -11,10 +11,10 @@ from operator import itemgetter
 if __name__ == '__main__':
     logging.basicConfig(filename='log.txt', filemode='w',level=logging.DEBUG)
     use_test_graph = True
-    N_random_tests = 30
+    N_random_tests = 50
     print("Initializing road graph...")
     if use_test_graph:
-        N_agents=20   # N agents
+        N_agents=15   # N agents
         f = open('test_graph.pkl', 'rb')
         Road_graph, travel_time = pickle.load(f)
         f.close()
@@ -31,7 +31,7 @@ if __name__ == '__main__':
     print("Running simulation with ", n_juncs," nodes and", N_agents," agents")
 
     np.random.seed(1)
-    N_iter=300
+    N_iter=600
     # containers for saved variables
     x_hsdm={}
     x_not_hsdm={}
@@ -56,8 +56,8 @@ if __name__ == '__main__':
         # If there is no way from the starting point to the final, try a different start-goal pair
         for i in range(N_agents):
             while initial_junctions[i] == final_destinations[i] or not nx.has_path(Road_graph, initial_junctions[i], final_destinations[i]):
-                initial_junctions[i]= np.random.randint(0, high=n_juncs - 1)
-                final_destinations[i] = np.random.randint(0, high=n_juncs - 1)
+                initial_junctions[i]= np.random.randint(0, high=n_juncs)
+                final_destinations[i] = np.random.randint(0, high=n_juncs)
         initial_junctions_stored.update({test:initial_junctions.copy()})
         final_destinations_stored.update({test:final_destinations.copy()})
         visited_nodes[test, :, 0] = torch.from_numpy(initial_junctions)
@@ -68,7 +68,7 @@ if __name__ == '__main__':
             logging.info("Initializing game for timestep " + str(t+1) + " out of " + str(T_horiz))
             game = Game(T_horiz-t, N_agents, Road_graph, initial_junctions, final_destinations, epsilon_probability=0.01)
             print("Done")
-            alg = FRB_algorithm(game, beta=0.01, alpha=0.1, theta=0.25)
+            alg = FRB_algorithm(game, beta=0.1, alpha=0.01, theta=0.2)
             status = alg.check_feasibility()
             if status != 'solved':
                 print("The problem is not feasible, status: " + status + ", skipping test...")
