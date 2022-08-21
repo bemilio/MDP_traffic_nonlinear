@@ -20,8 +20,8 @@ import pickle
 import torch
 from Utilities.plot_agent_route import plot_agent_route
 
-f = open('/Users/ebenenati/surfdrive/TUDelft/Simulations/MDP_traffic_nonlinear/6_july_22_2/saved_test_result_multiperiod.pkl', 'rb')
-f = open('saved_test_result_multiperiod.pkl', 'rb')
+f = open('/Users/ebenenati/surfdrive/TUDelft/Simulations/MDP_traffic_nonlinear/7_july_22/saved_test_result_multiperiod.pkl', 'rb')
+#f = open('saved_test_result_multiperiod.pkl', 'rb')
 ## Data structure:
 ## visited_nodes: Tensor with dimension (N_random_tests, N_agents, T_horiz+1)
 visited_nodes, road_graph, edge_time_to_index, node_time_to_index, T_horiz, \
@@ -58,7 +58,7 @@ torch.Tensor.ndim = property(lambda self: len(self.shape))  # Necessary to use m
 #     nx.draw_networkx_labels(road_graph, pos)
 #     nx.draw_networkx_edges(road_graph, pos=pos, edge_color=colors, edgelist=edgelist, edge_cmap=plt.cm.Reds,
 #                            connectionstyle='arc3, rad = 0.1')
-# Draw baseline
+# # Draw baseline
 # for t in range(T_horiz):
 #     for edge in road_graph.edges:
 #         if not edge[0] == edge[1]:
@@ -91,7 +91,7 @@ for i_test in range(N_tests):
 
 print("Plotting congestion comparison...")
 # bar plot of maximum edge congestion compared to constraint
-fig, ax = plt.subplots(figsize=(5 * 1.5, 3.6 * 1.5), layout='constrained')
+fig, ax = plt.subplots(figsize=(8 * 1.5, 3.6 * 1.5), layout='constrained')
 relative_congestions = torch.zeros(N_tests, N_edges, T_horiz)
 relative_congestion_baseline = torch.zeros(N_tests, N_edges, T_horiz)
 for i_test in range(N_tests):
@@ -122,8 +122,8 @@ for test in range(N_tests):
 
 if N_tests >= 2:
     ax.axhline(y=1, linewidth=1, color='red', label="Road limit")
-    ax.axhline(y=0.5, linewidth=1, color='orange', linestyle='--', label="Free-flow limit")
-    ax = sns.boxplot(x="edge", y="value", hue="method", data=max_congestion_dataframe, palette="Set3")
+    ax.axhline(y=0.05/0.15, linewidth=1, color='orange', linestyle='--', label="Free-flow limit")
+    ax = sns.stripplot(x="edge", y="value", hue="method", data=max_congestion_dataframe, palette="muted", size=10, alpha=0.25)
     ax.grid(True)
 else:
     ax.axhline(y=1, linewidth=1, color='red', label="Road limit")
@@ -137,7 +137,7 @@ else:
 plt.legend(prop={'size': 8})
 ax.set_xlabel(r'Edge')
 ax.set_ylabel(r'Congestion')
-ax.set_ylim([-0.1, 1.2])
+ax.set_ylim([-0.1, 2.])
 
 plt.show(block=False)
 plt.savefig('congestion_multiperiod.png')

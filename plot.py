@@ -20,14 +20,14 @@ import pickle
 import torch
 from Utilities.plot_agent_route import plot_agent_route
 
-# f = open('/Users/ebenenati/surfdrive/TUDelft/Simulations/MDP_traffic_nonlinear/6_july_22_2/saved_test_result.pkl', 'rb')
-f = open('saved_test_result.pkl', 'rb')
+f = open('/Users/ebenenati/surfdrive/TUDelft/Simulations/MDP_traffic_nonlinear/7_july_22/saved_test_result.pkl', 'rb')
+# f = open('saved_test_result.pkl', 'rb')
 ## Data structure:
 ## x: Tensor with dimension (n. random tests, N agents, n variables)
 ## dual: Tensor with dimension (n. random tests, n constraints, )
 ## Residual: Tensor with dimension (n. random tests, K iterations)
 x, dual, residual, cost, road_graph, edge_time_to_index, node_time_to_index, T_horiz, initial_junctions, final_destinations, \
-congestion_baseline_stored, cost_baseline_stored, is_feasible = pickle.load(f)
+congestion_baseline_stored, cost_baseline_stored = pickle.load(f)
 f.close()
 
 N_tests = x.size(0)
@@ -38,9 +38,11 @@ N_edges = road_graph.number_of_edges()
 N_vertices = road_graph.number_of_nodes()
 
 torch.Tensor.ndim = property(lambda self: len(self.shape))  # Necessary to use matplotlib with tensors
+
+## Plot # 1: Residuals
 print("Plotting residual...")
 fig, ax = plt.subplots(figsize=(5, 1.8), layout='constrained')
-ax.loglog(np.arange(0, N_iter * 10, 10), residual[0, :])
+ax.loglog(np.arange(0, N_iter * 10, 10), residual[21, :])
 plt.xlabel('Iteration')
 plt.ylabel('Residual')
 plt.legend()
@@ -48,57 +50,58 @@ plt.savefig('Residual.png')
 plt.show()
 plt.grid(True)
 
-# draw graph
-print("Plotting road graphs...")
-fig, ax = plt.subplots(T_horiz, 2, figsize=(5, 10 * 1.4), layout='constrained')
-pos = nx.get_node_attributes(road_graph, 'pos')
-
-for t in range(T_horiz):
-    colors = []
-    edgelist = []
-    nodes = []
-    for edge in road_graph.edges:
-        if not edge[0] == edge[1]:
-            color_edge = np.matrix([0])
-            congestion = torch.sum(x[0, :, edge_time_to_index[(edge, t)]], 0) / N_agents
-            color_edge = congestion
-            colors.append(int(256 * color_edge))
-            edgelist.append(edge)
-    for node in road_graph.nodes:
-        nodes.append(node)
-    pos = nx.kamada_kawai_layout(road_graph)
-    plt.sca(ax[t, 0])
-    nx.draw_networkx_nodes(road_graph, pos=pos, nodelist=nodes, node_size=150, node_color='blue')
-    nx.draw_networkx_labels(road_graph, pos)
-    nx.draw_networkx_edges(road_graph, pos=pos, edge_color=colors, edgelist=edgelist, edge_cmap=plt.cm.cool,
-                           connectionstyle='arc3, rad = 0.1')
-plt.show(block=False)
+# print("Plotting road graphs...")
+# fig, ax = plt.subplots(T_horiz, 2, figsize=(5, 10 * 1.4), layout='constrained')
+# pos = nx.get_node_attributes(road_graph, 'pos')
+#
+# for t in range(T_horiz):
+#     colors = []
+#     edgelist = []
+#     nodes = []
+#     for edge in road_graph.edges:
+#         if not edge[0] == edge[1]:
+#             color_edge = np.matrix([0])
+#             congestion = torch.sum(x[0, :, edge_time_to_index[(edge, t)]], 0) / N_agents
+#             color_edge = congestion
+#             colors.append(int(256 * color_edge))
+#             edgelist.append(edge)
+#     for node in road_graph.nodes:
+#         nodes.append(node)
+#     pos = nx.kamada_kawai_layout(road_graph)
+#     plt.sca(ax[t, 0])
+#     nx.draw_networkx_nodes(road_graph, pos=pos, nodelist=nodes, node_size=150, node_color='blue')
+#     nx.draw_networkx_labels(road_graph, pos)
+#     nx.draw_networkx_edges(road_graph, pos=pos, edge_color=colors, edgelist=edgelist, edge_cmap=plt.cm.cool,
+#                            connectionstyle='arc3, rad = 0.1')
+# plt.show(block=False)
 
 # Draw baseline
-for t in range(T_horiz):
-    colors = []
-    edgelist = []
-    nodes = []
-    for edge in road_graph.edges:
-        if not edge[0] == edge[1]:
-            color_edge = np.matrix([0])
-            if (edge, t) in congestion_baseline_stored[0].keys():
-                congestion = congestion_baseline_stored[0][(edge, t)]
-            else:
-                congestion = 0
-            color_edge = congestion
-            colors.append(int(256 * color_edge))
-            edgelist.append(edge)
-    for node in road_graph.nodes:
-        nodes.append(node)
-    pos = nx.kamada_kawai_layout(road_graph)
-    plt.sca(ax[t, 1])
-    nx.draw_networkx_nodes(road_graph, pos=pos, nodelist=nodes, node_size=150, node_color='blue')
-    nx.draw_networkx_labels(road_graph, pos)
-    nx.draw_networkx_edges(road_graph, pos=pos, edge_color=colors, edgelist=edgelist, edge_cmap=plt.cm.cool,
-                           connectionstyle='arc3, rad = 0.1')
-plt.show(block=False)
-plt.savefig('graph_plot.png')
+# for t in range(T_horiz):
+#     colors = []
+#     edgelist = []
+#     nodes = []
+#     for edge in road_graph.edges:
+#         if not edge[0] == edge[1]:
+#             color_edge = np.matrix([0])
+#             if (edge, t) in congestion_baseline_stored[0].keys():
+#                 congestion = congestion_baseline_stored[0][(edge, t)]
+#             else:
+#                 congestion = 0
+#             color_edge = congestion
+#             colors.append(int(256 * color_edge))
+#             edgelist.append(edge)
+#     for node in road_graph.nodes:
+#         nodes.append(node)
+#     pos = nx.kamada_kawai_layout(road_graph)
+#     plt.sca(ax[t, 1])
+#     nx.draw_networkx_nodes(road_graph, pos=pos, nodelist=nodes, node_size=150, node_color='blue')
+#     nx.draw_networkx_labels(road_graph, pos)
+#     nx.draw_networkx_edges(road_graph, pos=pos, edge_color=colors, edgelist=edgelist, edge_cmap=plt.cm.cool,
+#                            connectionstyle='arc3, rad = 0.1')
+# plt.show(block=False)
+# plt.savefig('graph_plot.png')
+
+### Plot #2 : congestion in tests vs. shortest path
 
 print("Plotting congestion comparison...")
 # bar plot of maximum edge congestion compared to constraint
@@ -114,6 +117,8 @@ for i_test in range(N_tests):
                 for t in range(T_horiz):
                     relative_congestion = (torch.sum(x[i_test, :, edge_time_to_index[(edge, t)]], 0) / N_agents) \
                                           / road_graph[edge[0]][edge[1]]['limit_roads']
+                    if relative_congestion>1.002:
+                        print("Constraint not satisfied at test " + str(i_test)  )
                     congestions[i_test, i_edges] = max(relative_congestion, congestions[i_test, i_edges])
                     if (edge, t) in congestion_baseline_stored[i_test].keys():
                         relative_congestion_baseline = congestion_baseline_stored[i_test][(edge, t)] / \
@@ -137,12 +142,12 @@ for i_test in range(N_tests):
 if N_tests >= 2:
 
     ax.axhline(y=1, linewidth=1, color='red', label="Road limit")
-    ax.axhline(y= 0.1, linewidth=1, color='orange', linestyle='--', label="Free-flow limit")
-    ax = sns.boxplot(x="edge", y="value", hue="method", data=congestion_dataframe, palette="Set3")
+    ax.axhline(y= 0.05/0.15, linewidth=1, color='orange', linestyle='--', label="Free-flow limit")
+    ax = sns.boxplot(x="edge", y="value", hue="method", data=congestion_dataframe, palette="muted")
     ax.grid(True)
 else:
     ax.axhline(y=1, linewidth=1, color='red', label="Road limit")
-    ax.axhline(y= 0.1, linewidth=1, color='orange', linestyle='--', label="Free-flow limit")
+    ax.axhline(y= 0.05/0.15, linewidth=1, color='orange', linestyle='--', label="Free-flow limit")
     ax.bar([k - 0.2 for k in range(congestions.size(1))], congestions.flatten(), width=0.4, align='center',
            label="Proposed")
     ax.bar([k + 0.2 for k in range(congestion_baseline.size(1))], congestion_baseline.flatten(), width=0.4,
@@ -152,11 +157,12 @@ else:
 plt.legend(prop={'size': 8})
 ax.set_xlabel(r'Edge')
 ax.set_ylabel(r'Congestion')
-ax.set_ylim([-0.1, 1.2])
+ax.set_ylim([-0.1, 1.5])
 
 plt.show(block=False)
 plt.savefig('congestion.png')
 
+### Plot #3 : traversing time in tests vs. shortest path
 
 print("Plotting cost comparison")
 fig, ax = plt.subplots(figsize=(5 * 1.5, 3.6 * 1.5), layout='constrained')
@@ -225,5 +231,6 @@ plt.show(block=False)
 plt.savefig('cost.png')
 print("Done")
 
+### Plot #4 : expected value congestion error vs. # of agents
 
-
+### Plot #4 : computed traversing time vs. # of agents

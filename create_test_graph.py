@@ -13,6 +13,7 @@ if use_small_graph:
         Road_graph.add_edge(i, i)
     Road_graph.add_edge(0,1)
     Road_graph.add_edge(0,2)
+    Road_graph.add_edge(2,0)
     Road_graph.add_edge(1,2)
 else:
     n_juncs=12
@@ -51,11 +52,12 @@ else:
 travel_time_roads={} # Linearization factor of the travel time func.
 capacity_roads={} # Denominator in the travel time function
 limit_roads={} # Used as maximum allowed cars in a road for the shared constraints
+uncontrolled_traffic = {} # number of uncontrolled vehicles on each road ( = 1 if number of vehicles is equal to the number of vehicles in an "agent" (agents are vehicle populations))
 
 node_positions={} # only for drawing
 index=0
 capacity = 0.05
-limit = 0.15
+limit = 1.
 v_free_flow = 1
 travel_time = 1
 for node in Road_graph.nodes:
@@ -66,17 +68,21 @@ for edge in Road_graph.edges:
         travel_time_roads.update({edge: 0})
         capacity_roads.update({edge: np.infty})
         limit_roads.update({edge: np.infty})
+        uncontrolled_traffic.update({edge: 0})
     else:
         travel_time_roads.update({edge: travel_time})
         capacity_roads.update({edge: capacity})
         limit_roads.update({edge: limit})
+        uncontrolled_traffic.update({edge: 1}) # 1 is the minimum necessary for monotonicity
 nx.set_node_attributes(Road_graph, values = node_positions, name = 'pos')
 
 nx.set_edge_attributes(Road_graph, values = travel_time_roads, name = 'travel_time')
 nx.set_edge_attributes(Road_graph, values = capacity_roads, name = 'capacity')
 nx.set_edge_attributes(Road_graph, values = limit_roads, name = 'limit_roads')
+nx.set_edge_attributes(Road_graph, values = uncontrolled_traffic, name = 'uncontrolled_traffic')
+
 
 f= open('test_graph.pkl', 'wb')  
-pickle.dump([Road_graph, travel_time], f)
+pickle.dump(Road_graph, f)
 f.close
 print("Graph created")

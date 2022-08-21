@@ -45,35 +45,39 @@ class Game:
             super().__init__()
             self.tau = torch.zeros(n_opt_variables, 1) # Stack all free-flow traversing time. To vectorize, vertices are treated the same as edges, but with cost 0.
             self.capacity = torch.ones(n_opt_variables, 1) # Stack of road (normalized) capacities. To vectorize, vertices are treated the same as edges. We initialize to 1 to avoid dividing by 0.
+            self.uncontrolled_traffic = torch.ones(n_opt_variables, 1) # see above
             for t in range(T_horiz):
                 for edge in road_graph.edges:
                     self.tau[edge_time_to_index[(edge, t)]] = road_graph[edge[0]][edge[1]]['travel_time']
                     self.capacity[edge_time_to_index[(edge, t)]] = road_graph[edge[0]][edge[1]]['capacity']
+                    self.uncontrolled_traffic[edge_time_to_index[(edge, t)]] = road_graph[edge[0]][edge[1]]['uncontrolled_traffic']
             self.capacity_4th = torch.pow(self.capacity, 4)
             self.k = 0.15 * torch.div(self.tau, self.capacity_4th)
             self.N = N
 
         def forward(self, x):
-                sigma = torch.sum(x, 0) / self.N
-                sigma_4th = torch.pow(sigma, 4)
-                ell = torch.add(self.tau, torch.mul(self.k, sigma_4th))  # l(sigma) where l is capacity
-                return torch.matmul(x.transpose(1,2), ell)
+            sigma = torch.add(torch.sum(x, 0), self.uncontrolled_traffic) / self.N
+            sigma_4th = torch.pow(sigma, 4)
+            ell = torch.add(self.tau, torch.mul(self.k, sigma_4th))  # l(sigma) where l is capacity
+            return torch.matmul(x.transpose(1,2), ell)
 
     class GameMapping(torch.nn.Module):
         def __init__(self, n_opt_variables, road_graph, N, T_horiz, edge_time_to_index):
             super().__init__()
             self.tau = torch.zeros(n_opt_variables, 1) # Stack all free-flow traversing time. To vectorize, vertices are treated the same as edges, but with cost 0.
             self.capacity = torch.ones(n_opt_variables, 1) # Stack of road (normalized) capacities. To vectorize, vertices are treated the same as edges. We initialize to 1 to avoid dividing by 0.
+            self.uncontrolled_traffic = torch.ones(n_opt_variables, 1) # see above
             for t in range(T_horiz):
                 for edge in road_graph.edges:
                     self.tau[edge_time_to_index[(edge, t)]] = road_graph[edge[0]][edge[1]]['travel_time']
                     self.capacity[edge_time_to_index[(edge, t)]] = road_graph[edge[0]][edge[1]]['capacity']
+                    self.uncontrolled_traffic[edge_time_to_index[(edge, t)]] = road_graph[edge[0]][edge[1]]['uncontrolled_traffic']
             self.capacity_4th = torch.pow(self.capacity, 4)
             self.k = 0.15 * torch.div(self.tau, self.capacity_4th) # multiplicative factor in the capacity function
             self.N = N
 
         def forward(self, x):
-            sigma = torch.sum(x,0)/self.N
+            sigma = torch.add(torch.sum(x, 0), self.uncontrolled_traffic) / self.N
             sigma_3rd = torch.pow(sigma, 3)
             sigma_4th = torch.pow(sigma, 4)
             ell = torch.add( self.tau, torch.mul(self.k, sigma_4th)) # l(sigma) where l is capacity
@@ -199,7 +203,8 @@ class Game:
             for t in range(len(shortest_paths[i_agent])-1):
                 edge_taken = (shortest_paths[i_agent][t], shortest_paths[i_agent][t+1])
                 capacity_edge = self.road_graph[edge_taken[0]][edge_taken[1]]['capacity']
-                cost_edge = self.road_graph[edge_taken[0]][edge_taken[1]]['travel_time'] * ( 1 + 0.15 * (congestion[(edge_taken,t)]/capacity_edge)**4 )
+                uncontrolled_traffic_edge = self.road_graph[edge_taken[0]][edge_taken[1]]['uncontrolled_traffic']
+                cost_edge = self.road_graph[edge_taken[0]][edge_taken[1]]['travel_time'] * ( 1 + 0.15 * ( (congestion[(edge_taken,t)] + uncontrolled_traffic_edge)/capacity_edge)**4 )
                 cost_incurred[i_agent] = cost_incurred[i_agent] + cost_edge
         return congestion, cost_incurred
 
