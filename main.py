@@ -10,7 +10,7 @@ import logging
 if __name__ == '__main__':
     logging.basicConfig(filename='log.txt', filemode='w',level=logging.DEBUG)
     use_test_graph = True
-    N_random_tests = 5
+    N_random_tests = 50
     print("Initializing road graph...")
     if use_test_graph:
         N_agents=10  # N agents
@@ -77,11 +77,11 @@ if __name__ == '__main__':
                 cost_store = torch.zeros(N_random_tests, N_agents)
                 is_feasible = torch.zeros(N_random_tests,1)
             print("Done")
-            alg = FRB_algorithm(game, beta=0.001, alpha=0.001, theta=0.2)
+            alg = FRB_algorithm(game, beta=0.003, alpha=0.003, theta=0.1)
             status = alg.check_feasibility()
             is_problem_feasible = (status == 'solved')
             if not is_problem_feasible:
-                print("the problem is not feasible: Test # " + test + ", attempt # " + attempt_create_feasible_problem)
+                print("the problem is not feasible: Test # " + str(test) + ", attempt # " + str(attempt_create_feasible_problem))
         index_store = 0
         avg_time_per_it = 0
         for k in range(N_iter):

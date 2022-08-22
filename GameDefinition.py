@@ -189,22 +189,22 @@ class Game:
         for i_agent in range(self.N_agents):
             shortest_paths.update({i_agent: nx.shortest_path(self.road_graph,  source=self.initial_junctions[i_agent],\
                              target = self.final_destinations[i_agent], weight='travel_time' )})
-        congestion = {}
+        sigma = {}
         for i_agent in range(self.N_agents):
             for t in range(len(shortest_paths[i_agent])-1):
                 for edge in self.road_graph.edges:
                     if edge == (shortest_paths[i_agent][t], shortest_paths[i_agent][t+1]):
-                        if (edge, t) in congestion.keys():
-                            congestion.update({(edge, t): congestion[(edge,t)] + 1./self.N_agents})
+                        if (edge, t) in sigma.keys():
+                            sigma.update({(edge, t): sigma[(edge,t)] + 1./self.N_agents})
                         else:
-                            congestion.update({(edge, t): 1. / self.N_agents})
+                            sigma.update({(edge, t): 1. / self.N_agents})
         cost_incurred = torch.zeros(self.N_agents, 1)
         for i_agent in range(self.N_agents):
             for t in range(len(shortest_paths[i_agent])-1):
                 edge_taken = (shortest_paths[i_agent][t], shortest_paths[i_agent][t+1])
                 capacity_edge = self.road_graph[edge_taken[0]][edge_taken[1]]['capacity']
                 uncontrolled_traffic_edge = self.road_graph[edge_taken[0]][edge_taken[1]]['uncontrolled_traffic']
-                cost_edge = self.road_graph[edge_taken[0]][edge_taken[1]]['travel_time'] * ( 1 + 0.15 * ( (congestion[(edge_taken,t)] + uncontrolled_traffic_edge)/capacity_edge)**4 )
+                cost_edge = self.road_graph[edge_taken[0]][edge_taken[1]]['travel_time'] * ( 1 + 0.15 * ( (sigma[(edge_taken,t)] + uncontrolled_traffic_edge)/capacity_edge)**4 )
                 cost_incurred[i_agent] = cost_incurred[i_agent] + cost_edge
-        return congestion, cost_incurred
+        return sigma, cost_incurred
 
