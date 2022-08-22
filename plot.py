@@ -358,15 +358,14 @@ for index_n in range(N_tests_sample_size):
                 # Toggle these two to change from expected value to realized value
                 sigma_expected = (torch.sum(x[i_test, :, edge_time_to_index[(edge, t)]], 0) / N_agents)
                 sigma_real = ((count_edge_taken_at_time[
-                                            (index_n, i_test, edge, t)] / n) / N_agents) \
-                                      / road_graph[edge[0]][edge[1]]['limit_roads']
+                                            (index_n, i_test, edge, t)] / n) / N_agents)
                 cost_edges_expected[index_n, i_test, i_edges, t] = road_graph[edge[0]][edge[1]]['travel_time'] * (
                             1 + 0.15 * ((sigma_expected + uncontrolled_traffic_edge) ** 4) / \
                             ((N_agents * road_graph[edge[0]][edge[1]]['capacity']) ** 4))
                 cost_edges_real[index_n, i_test, i_edges, t] = road_graph[edge[0]][edge[1]]['travel_time'] * (
                         1 + 0.15 * ((sigma_real + uncontrolled_traffic_edge) ** 4) / \
                         ((N_agents * road_graph[edge[0]][edge[1]]['capacity']) ** 4))
-                if np.abs(cost_edges_expected[index_n, i_test, i_edges, t].item() - cost_edges_real[index_n, i_test, i_edges, t].item() > 1):
+                if np.abs(cost_edges_expected[index_n, i_test, i_edges, t].item() - cost_edges_real[index_n, i_test, i_edges, t].item()) > 1:
                     print("Pause...")
             i_edges = i_edges+1
 
