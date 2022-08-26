@@ -81,7 +81,7 @@ class BackwardStep(torch.nn.Module):
             if results.info.status != 'solved':
                 print("[BackwardStep]: OSQP did not solve correctly, OSQP status:" + results.info.status)
                 logging.info("[BackwardStep]: OSQP did not solve correctly, OSQP status:" + results.info.status)
-                if results.info.status == 'maximum iterations reached' or results.info.status == 'solved_inaccurate':
+                if results.info.status == 'maximum iterations reached' or results.info.status == 'solved inaccurate':
                     # Re-attempt solution by scaling the costs, sometimes this gets OSQP to unstuck
                     i_attempt = 1
                     while i_attempt < 3 and results.info.status != 'solved':

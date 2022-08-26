@@ -36,7 +36,7 @@ def set_stepsizes(N, road_graph, A_ineq_shared, algorithm='FRB'):
 if __name__ == '__main__':
     logging.basicConfig(filename='log.txt', filemode='w',level=logging.DEBUG)
     use_test_graph = True
-    N_random_tests = 3
+    N_random_tests = 100
     print("Initializing road graph...")
     if use_test_graph:
         N_agents=8 # N agents
