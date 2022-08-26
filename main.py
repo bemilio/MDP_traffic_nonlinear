@@ -3,17 +3,43 @@ import networkx as nx
 import torch
 import pickle
 from FRB_algorithm import FRB_algorithm
+from FBF_algorithm import FBF_algorithm
+
 from GameDefinition import Game
 import time
 import logging
 
+
+def set_stepsizes(N, road_graph, A_ineq_shared, algorithm='FRB'):
+    theta = 0
+    c = road_graph.edges[(0, 1)]['capacity']
+    tau = road_graph.edges[(0, 1)]['travel_time']
+    a = road_graph.edges[(0, 1)]['uncontrolled_traffic']
+    k = 0.15 * 12 * tau / c
+    L = 2 * (N + k) / (3 * N) * (1 + a) ** 3 + k * (1 + a) ** 2
+    if algorithm == 'FRB':
+        # L = 2*k/(4*N) * (N+a)**3 + k/N * (N+a)**2 * (N + (N/3) * (N+a) + \
+        #                      np.sqrt( ((N/3)**2) * (N+a)**2  + (2*(N**2)/3) * (N+a) + N ) )
+        delta = 2*L / (1-3*theta)
+        eigval, eigvec = torch.linalg.eig(torch.bmm(A_ineq_shared, torch.transpose(A_ineq_shared, 1, 2)))
+        eigval = torch.real(eigval)
+        alpha = 0.5/((torch.max(torch.max(eigval, 1)[0])) + delta)
+        beta = N * 0.5/(torch.sum(torch.max(eigval, 1)[0]) + delta)
+    if algorithm == 'FBF':
+        eigval, eigvec = torch.linalg.eig(torch.sum(torch.bmm(A_ineq_shared, torch.transpose(A_ineq_shared, 1, 2)), 0)  )
+        eigval = torch.real(eigval)
+        alpha = 0.5/(L+torch.max(eigval))
+        beta = 0.5/(L+torch.max(eigval))
+    return (alpha.item(), beta.item(), theta)
+
+
 if __name__ == '__main__':
     logging.basicConfig(filename='log.txt', filemode='w',level=logging.DEBUG)
     use_test_graph = True
-    N_random_tests = 50
+    N_random_tests = 3
     print("Initializing road graph...")
     if use_test_graph:
-        N_agents=10  # N agents
+        N_agents=8 # N agents
         f = open('test_graph.pkl', 'rb')
         Road_graph = pickle.load(f)
         f.close()
@@ -30,7 +56,7 @@ if __name__ == '__main__':
     print("Running simulation with ", n_juncs," nodes and", N_agents," agents")
 
     np.random.seed(1)
-    N_iter=1000
+    N_iter=100000
     # containers for saved variables
     x_hsdm={}
     x_not_hsdm={}
@@ -73,11 +99,13 @@ if __name__ == '__main__':
                 # Initialize storing
                 x_store = torch.zeros(N_random_tests, N_agents, game.n_opt_variables)
                 dual_store = torch.zeros(N_random_tests, game.n_shared_ineq_constr)
-                residual_store = torch.zeros(N_random_tests, N_iter // 10)
+                residual_store = torch.zeros(N_random_tests, N_iter // 1)
                 cost_store = torch.zeros(N_random_tests, N_agents)
                 is_feasible = torch.zeros(N_random_tests,1)
             print("Done")
-            alg = FRB_algorithm(game, beta=0.003, alpha=0.003, theta=0.1)
+            [alpha, beta, theta] = set_stepsizes(N_agents, Road_graph, game.A_ineq_shared, algorithm='FRB')
+            alg = FRB_algorithm(game, beta=beta, alpha=alpha, theta=theta)
+            # alg = FBF_algorithm(game, beta=beta, alpha=alpha)
             status = alg.check_feasibility()
             is_problem_feasible = (status == 'solved')
             if not is_problem_feasible:
@@ -89,12 +117,14 @@ if __name__ == '__main__':
             alg.run_once()
             end_time = time.time()
             avg_time_per_it = (avg_time_per_it * k + (end_time - start_time)) / (k + 1)
-            if k % 10 == 0:
+            if k % 1 == 0:
                 x, d, r, c  = alg.get_state()
                 residual_store[test, index_store] = r
                 print("Iteration " + str(k) + " Residual: " + str(r.item()) + " Average time: " + str(avg_time_per_it))
                 logging.info("Iteration " + str(k) + " Residual: " + str(r.item()) + " Average time: " + str(avg_time_per_it))
                 index_store = index_store + 1
+                if r <= 10 ** (-4):
+                    break
         # store results
         x, d, r, c = alg.get_state()
         x_store[test, :, :] = x.flatten(1)
@@ -122,3 +152,5 @@ if __name__ == '__main__':
     f.close()
     print("Saved")
     logging.info("Saved, job done")
+
+

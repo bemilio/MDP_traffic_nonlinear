@@ -5,12 +5,11 @@ import numpy as np
 torch.set_default_dtype(torch.float64)
 
 
-# For aggregative monotone games
-class FRB_algorithm:
-    def __init__(self, game, x_0=None, dual_0=None, beta = 0.001, alpha = 0.001, theta= 0.2):
+# For aggregative monotone games, See Belgioioso 2021
+class FBF_algorithm:
+    def __init__(self, game, x_0=None, dual_0=None, beta = 0.1, alpha = 0.1):
         self.game = game
         self.alpha = alpha
-        self.theta = theta
         self.beta = beta
         N_agents = game.N_agents
         n = game.n_opt_variables
@@ -27,24 +26,31 @@ class FRB_algorithm:
         self.dual_last = self.dual
         Q = torch.zeros(N_agents, n, n) # Local cost is zero
         q = torch.zeros(N_agents, n, 1)
-        self.prox = backwardStep.BackwardStep(Q, q, game.A_ineq_loc, game.b_ineq_loc, game.A_eq_loc, game.b_eq_loc, self.alpha, index_soft_constraints=game.index_soft_constraints)
+        self.prox = backwardStep.BackwardStep(Q, q, game.A_ineq_loc, game.b_ineq_loc, game.A_eq_loc, game.b_eq_loc, \
+                                              self.alpha, index_soft_constraints=game.index_soft_constraints)
         self.projection = backwardStep.BackwardStep(Q, q, game.A_ineq_loc, game.b_ineq_loc, game.A_eq_loc, game.b_eq_loc,
                                               1, index_soft_constraints=game.index_soft_constraints)
 
     def run_once(self):
         x = self.x
         dual = self.dual
-        A_i = 10* self.game.A_ineq_shared # Scaling the constraints apparently helps convergence
-        b_i = 10* self.game.b_ineq_shared
-        r = 2 * self.game.F(x) - self.game.F(self.x_last)
-        x_new, status = self.prox(x - self.alpha * (r + torch.matmul(torch.transpose(A_i, 1, 2), self.dual )) + self.theta * (x - self.x_last))
-        d = 2 * torch.bmm(A_i, x_new) - torch.bmm(A_i, x) - b_i
-        self.x_last = x
+        A_i = self.game.A_ineq_shared
+        b_i = self.game.b_ineq_shared
+        # Primal update 1
+        y = x - self.alpha*(self.game.F(x)  + torch.matmul(torch.transpose(A_i, 1, 2), self.dual ) )
+        x_tilde, status = self.projection(y)
+        # Dual update 1
+        d_tilde = torch.bmm(A_i, x) - b_i
+        d_tilde_avg = torch.sum(d_tilde, 0) / self.game.N_agents
+        lambda_tilde = torch.maximum( dual + self.beta * d_tilde_avg , torch.zeros(dual.size()))
+        # Primal update 2
+        r = x_tilde - self.alpha*( self.game.F(x) + torch.matmul(torch.transpose(A_i, 1, 2), lambda_tilde )  )
+        x_new, status = self.projection(x - y + r)
         self.x = x_new
-        # Dual update
+        d = torch.bmm(A_i, x_tilde) - b_i
         d_avg = torch.sum(d, 0) / self.game.N_agents
-        dual_new = torch.maximum( dual + self.beta * d_avg + self.theta * (dual - self.dual_last) , torch.zeros(dual.size()))
-        self.dual_last = dual
+        # Dual update 2
+        dual_new = torch.maximum( dual + self.beta * (d_avg - d_tilde_avg), torch.zeros(dual.size()) )
         self.dual = dual_new
 
     def get_state(self):
@@ -53,13 +59,12 @@ class FRB_algorithm:
         return self.x, self.dual, residual, cost
 
     def compute_residual(self):
-        A_i = 10* self.game.A_ineq_shared
-        b_i = 10* self.game.b_ineq_shared
-        x = self.x
-        x_transformed, status = self.projection(x-self.game.F(x) - torch.matmul(torch.transpose(A_i, 1, 2), self.dual ) )
-        torch.sum(torch.bmm(A_i,x) - b_i, 0)
+        A_i = self.game.A_ineq_shared
+        b_i = self.game.b_ineq_shared
+        x_transformed, status = self.projection(self.x-self.game.F(self.x) - torch.matmul(torch.transpose(A_i, 1, 2), self.dual ) )
+        torch.sum(torch.bmm(A_i, self.x) - b_i, 0)
         dual_transformed = torch.maximum(self.dual + torch.sum(torch.bmm(A_i, self.x) - b_i, 0), torch.zeros(self.dual.size()))
-        residual = np.sqrt( ((x - x_transformed).norm())**2 + ((self.dual-dual_transformed).norm())**2 )
+        residual = np.sqrt( ((self.x - x_transformed).norm())**2 + ((self.dual-dual_transformed).norm())**2 )
         return residual
 
     def check_feasibility(self):

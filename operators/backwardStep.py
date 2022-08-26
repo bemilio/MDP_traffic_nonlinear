@@ -69,14 +69,44 @@ class BackwardStep(torch.nn.Module):
 
         y=torch.zeros(x.size())
         flag_soft = False
+        is_solved = False
         for n in range(x.size(0)):
             m = osqp.OSQP()
             q2_n = q2[n,:,:].numpy()
-            m.setup(P=self.Q[n], q=q2_n, A=self.A_ineq[n], l=self.lower[n], u=self.upper[n], verbose=False, warm_start=False, max_iter=50000, eps_abs=10**(-8), eps_rel=10**(-8))
+            # m.setup(P=self.Q[n], q=q2_n, A=self.A_ineq[n], l=self.lower[n], u=self.upper[n], verbose=False, warm_start=True, max_iter=50000, eps_abs=10**(-8), eps_rel=10**(-8))
+            m.setup(P=self.Q[n], q=q2_n, A=self.A_ineq[n], l=self.lower[n], u=self.upper[n], verbose=False,
+                    warm_start=True, max_iter=100000, eps_abs=10 ** (-8), eps_rel=10 ** (-8), eps_prim_inf=10 ** (-8),
+                    eps_dual_inf=10 ** (-8))
             results = m.solve()
-            if results.info.status != 'solved' and results.info.status != 'maximum iterations reached':
+            if results.info.status != 'solved':
                 print("[BackwardStep]: OSQP did not solve correctly, OSQP status:" + results.info.status)
                 logging.info("[BackwardStep]: OSQP did not solve correctly, OSQP status:" + results.info.status)
+                if results.info.status == 'maximum iterations reached' or results.info.status == 'solved_inaccurate':
+                    # Re-attempt solution by scaling the costs, sometimes this gets OSQP to unstuck
+                    i_attempt = 1
+                    while i_attempt < 3 and results.info.status != 'solved':
+                        print("[BackwardStep]: Re-trying solution, attempt:" + str(i_attempt))
+                        logging.info("[BackwardStep]: Re-trying solution, attempt:" + str(i_attempt))
+                        m = osqp.OSQP()
+                        m.setup(P=(i_attempt+1) * self.Q[n], q=(i_attempt+1) * q2_n, A=self.A_ineq[n], l=self.lower[n], u=self.upper[n], verbose=False,
+                                warm_start=True, max_iter=100000, eps_abs=10 ** (-8), eps_rel=10 ** (-8),
+                                eps_prim_inf=10 ** (-8),
+                                eps_dual_inf=10 ** (-8))
+                        results=m.solve()
+                        if self.n_soft_constraints > 0:
+                            if np.any(np.transpose(np.matrix(results.x))[-self.n_soft_constraints:, :] > 0.0001):
+                                flag_soft = True
+
+                            y[n, :, :] = torch.from_numpy(
+                                np.transpose(np.matrix(results.x))[0:-self.n_soft_constraints, :])
+                        else:
+                            y[n, :, :] = torch.from_numpy(np.transpose(np.matrix(results.x)))
+                        i_attempt = i_attempt+1
+                        if results.info.status == 'solved':
+                            print("[BackwardStep]: QP Solved correctly")
+                            logging.info("[BackwardStep]: QP Solved correctly")
+
+
             else:
                 if self.n_soft_constraints>0:
                     if np.any(np.transpose(np.matrix(results.x))[-self.n_soft_constraints:,:] >0.0001 ) :
@@ -88,4 +118,4 @@ class BackwardStep(torch.nn.Module):
         # if flag_soft:
         #     print("[BackwardStep]: Warning: soft constraints are not satisfied, the solution is approximated")
         #     logging.info("[BackwardStep]: Warning: soft constraints are not satisfied, the solution is approximated")
-        return y, results.info.status,
+        return y, results.info.status

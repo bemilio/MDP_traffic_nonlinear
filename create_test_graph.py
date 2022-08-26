@@ -1,7 +1,6 @@
 import networkx as nx
 import numpy as np
 import pickle
-import matplotlib.pyplot as plt
 
 use_small_graph = False
 
@@ -56,10 +55,9 @@ uncontrolled_traffic = {} # number of uncontrolled vehicles on each road ( = 1 i
 
 node_positions={} # only for drawing
 index=0
-capacity = 0.05
-limit = 1.
-v_free_flow = 1
-travel_time = 1
+capacity = 0.1
+limit = 0.20
+travel_time = 0.1
 for node in Road_graph.nodes:
     node_positions.update({node: (index,index%2)})
     index = index+1
