@@ -21,7 +21,7 @@ import pickle
 import torch
 from Utilities.plot_agent_route import plot_agent_route
 
-# f = open('/Users/ebenenati/surfdrive/TUDelft/Simulations/MDP_traffic_nonlinear/7_july_22/saved_test_result.pkl', 'rb')
+# f = open('/Users/ebenenati/surfdrive/TUDelft/Simulations/MDP_traffic_nonlinear/29_aug_22/saved_test_result.pkl', 'rb')
 f = open('saved_test_result.pkl', 'rb')
 ## Data structure:
 ## x: Tensor with dimension (n. random tests, N agents, n variables)
@@ -43,57 +43,33 @@ torch.Tensor.ndim = property(lambda self: len(self.shape))  # Necessary to use m
 #Plot # 0: road graph
 # Toggle for multiple graphs
 # fig, ax = plt.subplots(T_horiz, 2, figsize=(5, 10 * 1.4), layout='constrained')
-fig, ax = plt.subplots(1, 1, figsize=(5, 2.6), layout='constrained')
-pos = nx.get_node_attributes(road_graph, 'pos')
-
-# Toggle for multiple grrpahs
+# # fig, ax = plt.subplots(1, 1, figsize=(5, 2.6), layout='constrained')
+# pos = nx.get_node_attributes(road_graph, 'pos')
+#
+# # Toggle for multiple grrpahs
 # for t in range(T_horiz):
-for t in range(1):
-    colors = []
-    edgelist = []
-    nodes = []
-    for edge in road_graph.edges:
-        if not edge[0] == edge[1]:
-            color_edge = np.matrix([0])
-            congestion = torch.sum(x[0, :, edge_time_to_index[(edge, t)]], 0) / N_agents
-            color_edge = congestion
-            colors.append(int(256 * color_edge))
-            edgelist.append(edge)
-    for node in road_graph.nodes:
-        nodes.append(node)
-    pos = nx.kamada_kawai_layout(road_graph)
-    # plt.sca(ax[t, 0])
-    nx.draw_networkx_nodes(road_graph, pos=pos, nodelist=nodes, node_size=120, node_color='cyan')
-    nx.draw_networkx_labels(road_graph, pos)
-    # Toggle to color edges based on congestion
-    # nx.draw_networkx_edges(road_graph, pos=pos, edge_color=colors, edgelist=edgelist, edge_cmap=plt.cm.cool,
-    #                        connectionstyle='arc3, rad = 0.1')
-    nx.draw_networkx_edges(road_graph, pos=pos, edgelist=edgelist,
-                           connectionstyle='arc3, rad = 0.2')
-plt.show(block=False)
-plt.savefig('0_graph.png')
-
-
-
-## Plot # 1: Residuals
-print("Plotting residual...")
-fig, ax = plt.subplots(figsize=(5, 1.8), layout='constrained')
-ax.plot(np.arange(0, N_iter * 10, 10), torch.max(residual[:, :], dim=0).values, "tab:cyan", linewidth=.5 )
-ax.plot(np.arange(0, N_iter * 10, 10), torch.min(residual[:, :], dim=0).values, "tab:cyan", linewidth=.5 )
-plt.fill_between(np.arange(0, N_iter * 10, 10), torch.min(residual[:, :], dim=0).values, torch.max(residual[:, :], dim=0).values, color="tab:cyan", alpha=0.3, label="Min-max residual")
-ax.plot(np.arange(0, N_iter * 10, 10), torch.sum(residual[:, :], 0)/N_tests, "tab:orange", label="Average residual" )
-
-plt.xscale('log')
-plt.yscale('log')
-
-plt.xlabel('Iteration')
-plt.ylabel('Residual')
-plt.legend()
-plt.savefig('1_residual.png')
-plt.show()
-plt.grid(True)
-
-
+# # for t in range(1):
+#     colors = []
+#     edgelist = []
+#     nodes = []
+#     for edge in road_graph.edges:
+#         if not edge[0] == edge[1]:
+#             color_edge = np.matrix([0])
+#             congestion = torch.sum(x[0, :, edge_time_to_index[(edge, t)]], 0) / N_agents
+#             color_edge = congestion
+#             colors.append(int(256 * color_edge))
+#             edgelist.append(edge)
+#     for node in road_graph.nodes:
+#         nodes.append(node)
+#     pos = nx.kamada_kawai_layout(road_graph)
+#     plt.sca(ax[t, 0])
+#     nx.draw_networkx_nodes(road_graph, pos=pos, nodelist=nodes, node_size=120, node_color='cyan')
+#     nx.draw_networkx_labels(road_graph, pos)
+#     # Toggle to color edges based on congestion
+#     nx.draw_networkx_edges(road_graph, pos=pos, edge_color=colors, edgelist=edgelist, edge_cmap=plt.cm.cool,
+#                            connectionstyle='arc3, rad = 0.1')
+    # nx.draw_networkx_edges(road_graph, pos=pos, edgelist=edgelist,
+    #                        connectionstyle='arc3, rad = 0.2')
 # Draw baseline
 # for t in range(T_horiz):
 #     colors = []
@@ -117,8 +93,34 @@ plt.grid(True)
 #     nx.draw_networkx_labels(road_graph, pos)
 #     nx.draw_networkx_edges(road_graph, pos=pos, edge_color=colors, edgelist=edgelist, edge_cmap=plt.cm.cool,
 #                            connectionstyle='arc3, rad = 0.1')
+#
 # plt.show(block=False)
-# plt.savefig('graph_plot.png')
+#
+# plt.savefig('0_graph.png')
+
+
+
+## Plot # 1: Residuals
+print("Plotting residual...")
+fig, ax = plt.subplots(figsize=(5, 1.8), layout='constrained')
+ax.plot(np.arange(0, N_iter * 10, 10), torch.max(residual[:, :], dim=0).values, "tab:cyan", linewidth=.5 )
+ax.plot(np.arange(0, N_iter * 10, 10), torch.min(residual[:, :], dim=0).values, "tab:cyan", linewidth=.5 )
+plt.fill_between(np.arange(0, N_iter * 10, 10), torch.min(residual[:, :], dim=0).values, torch.max(residual[:, :], dim=0).values, color="tab:cyan", alpha=0.3, label="Min-max residual")
+ax.plot(np.arange(0, N_iter * 10, 10), torch.sum(residual[:, :], 0)/N_tests, "tab:orange", label="Average residual" )
+
+plt.xscale('log')
+plt.yscale('log')
+
+plt.xlabel('Iteration')
+plt.ylabel('Residual')
+plt.legend()
+plt.grid(True)
+plt.savefig('1_residual.png')
+plt.savefig('1_residual.pdf')
+
+plt.show()
+
+
 
 ### Plot #2 : congestion in tests vs. shortest path
 
@@ -162,7 +164,7 @@ for test in range(N_tests):
 
 print("Plotting congestion comparison...")
 # bar plot of maximum edge congestion compared to constraint
-fig, ax = plt.subplots(figsize=(5 * 1.5, 3.6 * 1.5), layout='constrained')
+fig, ax = plt.subplots(figsize=(5 * 1, 3.6 * 1), layout='constrained')
 congestions = torch.zeros(N_tests, N_edges)
 congestion_baseline = torch.zeros(N_tests, N_edges)
 
@@ -199,9 +201,9 @@ for i_test in range(N_tests):
         congestion_dataframe = congestion_dataframe.append(s_row)
 
 if N_tests >= 2:
-    ax.axhline(y=1, linewidth=1, color='red', label="Road limit")
-    ax.axhline(y= 0.05/0.15, linewidth=1, color='orange', linestyle='--', label="Free-flow limit")
-    ax = sns.boxplot(x="edge", y="value", hue="method", data=congestion_dataframe, palette="muted")
+    ax.axhline(y=1, linewidth=2, color='red', label="Road limit")
+    ax.axhline(y= 0.1/0.2, linewidth=2, color='gold', linestyle='--', label="Free-flow limit")
+    ax = sns.boxplot(x="edge", y="value", hue="method", data=congestion_dataframe, palette="muted", medianprops={'color': 'lime', 'lw': 2})
     ax.grid(True)
 else:
     ax.axhline(y=1, linewidth=1, color='red', label="Road limit")
@@ -216,15 +218,13 @@ plt.legend(prop={'size': 8})
 ax.set_xlabel(r'Edge')
 ax.set_ylabel(r'Congestion')
 ax.set_ylim([-0.1, 1.5])
+plt.savefig('2_comparison_congestions.png')
+plt.savefig('2_comparison_congestions.pdf')
 
 plt.show(block=False)
-plt.savefig('2_comparison_congestions.png')
-
 
 ### Plot #3 : traversing time in tests vs. shortest path
 
-print("Plotting cost comparison")
-fig, ax = plt.subplots(figsize=(5 * 1.5, 3.6 * 1.5), layout='constrained')
 ## Computed cost function with exact expected congestion
 # Generate vectors of length N that sum to 4
 # print("Computing exact cost... this will take a while")
@@ -259,7 +259,7 @@ fig, ax = plt.subplots(figsize=(5 * 1.5, 3.6 * 1.5), layout='constrained')
 # print("Computed, plotting...")
 ##
 
-fig, ax = plt.subplots(figsize=(5 * 1.5, 3.6 * 1.5), layout='constrained')
+fig, ax = plt.subplots(figsize=(5 * 1, 1.8 * 1), layout='constrained')
 
 social_cost = torch.zeros(N_tests)
 social_cost_baseline = torch.zeros(N_tests)
@@ -267,18 +267,19 @@ for i_test in range(N_tests):
     for edge in road_graph.edges:
         for t in range(T_horiz):
             uncontrolled_traffic_edge = road_graph[edge[0]][edge[1]]['uncontrolled_traffic']
-            sigma = ( (count_edge_taken_at_time[(i_test, edge, t)]/N_vehicles_per_agent) / N_agents)
-            cost_edge = road_graph[edge[0]][edge[1]]['travel_time'] * ( 1 + 0.15 * ((sigma + uncontrolled_traffic_edge)**4) / \
-                                                                         ((N_agents * road_graph[edge[0]][edge[1]]['capacity'])**4))
+            sigma = (count_edge_taken_at_time[(i_test, edge, t)]/N_vehicles_per_agent)/N_agents
+            cost_edge = road_graph[edge[0]][edge[1]]['travel_time'] * ( 1 + 0.15 * ( (sigma + (uncontrolled_traffic_edge / N_agents) )/ \
+                                                            (road_graph[edge[0]][edge[1]]['capacity']) )**4)
             if (edge, t) in congestion_baseline_stored[i_test].keys():
                 sigma_baseline = congestion_baseline_stored[i_test][(edge, t)]
             else:
                 sigma_baseline=0
             cost_edge_baseline = road_graph[edge[0]][edge[1]]['travel_time'] * (
-                        1 + 0.15 * ((sigma_baseline+ uncontrolled_traffic_edge) ** 4) / \
-                        ((N_agents * road_graph[edge[0]][edge[1]]['capacity']) ** 4))
+                        1 + 0.15 * ((sigma_baseline+(uncontrolled_traffic_edge / N_agents) ) / \
+                        (road_graph[edge[0]][edge[1]]['capacity']) )** 4)
             cost_partial = sigma * cost_edge
             cost_partial_baseline = sigma_baseline * cost_edge_baseline
+
             social_cost[i_test] = social_cost[i_test] + cost_partial
             social_cost_baseline[i_test] = social_cost_baseline[i_test] + cost_partial_baseline
 
@@ -299,11 +300,12 @@ ax.grid(True)
 
 # ax.axhline(y=0, linewidth=1, color='red')
 
-ax.set_xlabel(r'$J(x_b) - J(x^{\star})/J(x_b)$ ')
+ax.set_xlabel(r'$\frac{\sum_i J_i(x_b) - J_i(x^{\star})}{\sum_i J_i(x_b)}$ ')
 
-plt.legend(prop={'size': 8})
-plt.show(block=False)
 plt.savefig('3_comparison_social_welfare.png')
+plt.savefig('3_comparison_social_welfare.pdf')
+
+plt.show(block=False)
 
 ### Plot #4 : expected value congestion error vs. # of agents
 
@@ -344,7 +346,7 @@ for index_n in range(N_tests_sample_size):
                         else:
                             conditioned_prob[end_node] = 0
                     if sum(conditioned_prob) -1 >=0.0001:
-                        print("Warning: conditioned prob. does not sum to 1, but to " + sum(conditioned_prob))
+                        print("Warning: conditioned prob. does not sum to 1, but to " + str(sum(conditioned_prob)))
                     conditioned_prob = conditioned_prob/sum(conditioned_prob) #necessary just for numerical tolerancies
                     next_visited_node = np.random.choice(range(road_graph.number_of_nodes()), p=conditioned_prob)
                     visited_nodes[i_test, i_agent, vehicle, t + 1] = next_visited_node
@@ -355,18 +357,17 @@ for index_n in range(N_tests_sample_size):
         for edge in road_graph.edges:
             for t in range(T_horiz):
                 uncontrolled_traffic_edge = road_graph[edge[0]][edge[1]]['uncontrolled_traffic']
-                # Toggle these two to change from expected value to realized value
                 sigma_expected = (torch.sum(x[i_test, :, edge_time_to_index[(edge, t)]], 0) / N_agents)
                 sigma_real = ((count_edge_taken_at_time[
                                             (index_n, i_test, edge, t)] / n) / N_agents)
                 cost_edges_expected[index_n, i_test, i_edges, t] = road_graph[edge[0]][edge[1]]['travel_time'] * (
-                            1 + 0.15 * ((sigma_expected + uncontrolled_traffic_edge) ** 4) / \
-                            ((N_agents * road_graph[edge[0]][edge[1]]['capacity']) ** 4))
+                            1 + 0.15 * ((sigma_expected + (uncontrolled_traffic_edge/N_agents) ) ** 4) / \
+                            ((road_graph[edge[0]][edge[1]]['capacity']) ** 4))
                 cost_edges_real[index_n, i_test, i_edges, t] = road_graph[edge[0]][edge[1]]['travel_time'] * (
-                        1 + 0.15 * ((sigma_real + uncontrolled_traffic_edge) ** 4) / \
-                        ((N_agents * road_graph[edge[0]][edge[1]]['capacity']) ** 4))
-                if np.abs(cost_edges_expected[index_n, i_test, i_edges, t].item() - cost_edges_real[index_n, i_test, i_edges, t].item()) > 1:
-                    print("Pause...")
+                        1 + 0.15 * ((sigma_real + (uncontrolled_traffic_edge/N_agents) ) ** 4) / \
+                        (( road_graph[edge[0]][edge[1]]['capacity']) ** 4))
+                if np.abs(cost_edges_expected[index_n, i_test, i_edges, t]-cost_edges_real[index_n, i_test, i_edges, t])>0.1 and index_n==2:
+                    print("pause")
             i_edges = i_edges+1
 
 cost_dataframe_comparison = pd.DataFrame(columns=['n_vehicles', 'sample'])
@@ -384,7 +385,13 @@ for index_n in range(N_tests_sample_size):
 ax = sns.boxplot(x='n_vehicles', y='sample', data=cost_dataframe_comparison, palette="muted")
 ax.set_xlabel("Vehicles per agent")
 ax.set_ylabel(r'$ \sum_{e\in\mathcal E, t} | \ell(\sigma^{e, t}) - \ell(\hat\sigma^{e, t})|$')
-plt.show(block="False")
+ax.set_yscale('log')
+ax.set_ylim([-0.1, 5])
+ax.grid(True)
 plt.savefig('4_comparison_expected_congestion.png')
+plt.savefig('4_comparison_expected_congestion.pdf')
+
+plt.show(block="False")
+
 
 print("Done")

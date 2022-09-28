@@ -55,8 +55,8 @@ uncontrolled_traffic = {} # number of uncontrolled vehicles on each road ( = 1 i
 
 node_positions={} # only for drawing
 index=0
-capacity = 0.1
-limit = 0.20
+capacity = 0.01
+limit = 100
 travel_time = 0.1
 for node in Road_graph.nodes:
     node_positions.update({node: (index,index%2)})
