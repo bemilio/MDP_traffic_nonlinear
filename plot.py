@@ -125,7 +125,7 @@ plt.show()
 ### Plot #2 : congestion in tests vs. shortest path
 
 # Preliminaries: generate realization of probabilistic controller
-N_vehicles_per_agent = 10**2
+N_vehicles_per_agent = 10**3
 
 visited_nodes = torch.zeros((N_tests, N_agents, N_vehicles_per_agent, T_horiz+1))
 count_edge_taken_at_time = {} # count how many vehicles pass by the edge at time t

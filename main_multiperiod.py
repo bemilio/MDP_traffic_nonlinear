@@ -34,13 +34,13 @@ if __name__ == '__main__':
     logging.basicConfig(filename='log.txt', filemode='w',level=logging.DEBUG)
     use_test_graph = True
     N_random_tests = 3
-    N_vehicles_per_agent = 100
+    N_vehicles_per_agent = 1000
     print("Initializing road graph...")
     N_agents=8   # N agents
     f = open('test_graph.pkl', 'rb')
     Road_graph = pickle.load(f)
     f.close()
-    T_horiz_to_test= [1, 3, 5]
+    T_horiz_to_test= [8]
     T_simulation=8
 
     n_juncs = len(Road_graph.nodes)
@@ -119,14 +119,14 @@ if __name__ == '__main__':
                     alg.run_once()
                     end_time = time.time()
                     avg_time_per_it = (avg_time_per_it * k + (end_time - start_time)) / (k + 1)
-                    if k % 10 == 0:
+                    if k % 100 == 0:
                         x, d, r, c = alg.get_state()
                         print("Iteration " + str(k) + " Residual: " + str(r.item()) + " Average time: " + str(
                             avg_time_per_it))
                         logging.info("Iteration " + str(k) + " Residual: " + str(r.item()) + " Average time: " + str(
                             avg_time_per_it))
                         index_store = index_store + 1
-                        if r <= 10 ** (-1):
+                        if r <= 10 ** (-4):
                             break
                 # store results
                 x, d, r, c = alg.get_state()
@@ -150,15 +150,41 @@ if __name__ == '__main__':
                     for node in range(Road_graph.number_of_nodes()):
                         initial_state[node, i_agent] = np.count_nonzero(visited_nodes[(test,T_horiz)][i_agent,:,t+1] == node) / N_vehicles_per_agent
                 x_store[(test,T_horiz)][:, :, t] = x.flatten(1)
+                # Compute baselines
                 if t==0 and T_horiz==T_horiz_to_test[0]:
+                    # First baseline: shortest path
                     congestion_baseline_instance, cost_baseline_instance = game.compute_baseline(initial_junctions, final_destinations) # Compute cost of naive shortest path
                     congestion_baseline.update({test : congestion_baseline_instance})
                     cost_baseline.update({test : cost_baseline_instance.flatten(0)})
+                    # Second baseline: non-receding horizon solution (one shot solution)
+                    print("Computing one-shot solution for baseline...")
+                    logging.info("Computing one-shot solution for baseline...")
+                    initial_state_oneshot = torch.zeros(Road_graph.number_of_nodes(), N_agents)
+                    for i in range(N_agents):
+                        initial_state_oneshot[initial_junctions[i], i] = 1
+                    game = Game(T_simulation, N_agents, Road_graph, initial_state_oneshot, final_destinations,
+                                add_terminal_cost=False, add_destination_constraint=True, epsilon_probability=0.01,
+                                xi=1)
+                    [alpha, beta, theta] = set_stepsizes(N_agents, Road_graph, game.A_ineq_shared, algorithm='FRB')
+                    alg = FRB_algorithm(game, beta=beta, alpha=alpha, theta=theta)
+                    for k in range(N_iter*10):
+                        alg.run_once()
+                        if k % 100 == 0:
+                            x, d, r, c = alg.get_state()
+                            if r <= 10 ** (-4):
+                                break
+                            print("Iteration (one-shot solution): " + str(k) + " Residual: " + str(r.item()))
+                            logging.info("Iteration (one-shot solution): " + str(k) + " Residual: " + str(r.item()))
+                    if test == 0:
+                        x_oneshot_store = torch.zeros(N_random_tests, N_agents, game.n_opt_variables)
+                    x_oneshot_store[test, :, :] = x.flatten(1)
+                    edge_time_to_index_oneshot = game.edge_time_to_index
+                    node_time_to_index_oneshot = game.node_time_to_index
 
     print("Saving results...")
     logging.info("Saving results...")
     f = open('saved_test_result_multiperiod.pkl', 'wb')
-    pickle.dump([ x_store, visited_nodes, Road_graph, game.edge_time_to_index, game.node_time_to_index, T_horiz_to_test, T_simulation, \
+    pickle.dump([ x_store, x_oneshot_store, visited_nodes, Road_graph, edge_time_to_index_oneshot, node_time_to_index_oneshot, T_horiz_to_test, T_simulation, \
                  initial_junctions_stored, final_destinations_stored, congestion_baseline, cost_baseline, N_random_tests], f)
     f.close()
     print("Saved")
