@@ -110,7 +110,7 @@ for test in range(N_tests):
                 list_value[index_datapoint] = time_destination
                 index_datapoint = index_datapoint +1
 time_destination_dataframe = pd.DataFrame(list(zip(list_tests, list_T_horiz, list_agents, list_vehicles, list_value)), columns=['test', 'T horiz', 'agent','vehicle', 'value'])
-ax = sns.boxplot(x = "T horiz", y="value", data=time_destination_dataframe, palette="muted", medianprops={'color': 'lime', 'lw': 2})
+ax = sns.boxplot(x = "T horiz", y="value", data=time_destination_dataframe, palette="hls", medianprops={'color': 'lime', 'lw': 2})
 ax.grid(True)
 plt.show(block=False)
 
@@ -135,8 +135,13 @@ list_timestep = [None] *N_datapoints
 list_agents = [None] *N_datapoints
 list_vehicles = [None] *N_datapoints
 list_value = [None] *N_datapoints
+list_is_baseline = [None] *N_datapoints
+list_is_baseline_2= [None] * (len(T_horiz_tested) + 2)
 index_datapoint =0
+index_horizon = 0
 for T_horiz in T_horiz_tested:
+    list_is_baseline_2[index_horizon]=T_horiz
+    index_horizon = index_horizon+1
     for t in range(T_simulation):
         for test in range(N_tests):
             for i in range(N_agents):
@@ -149,8 +154,28 @@ for T_horiz in T_horiz_tested:
                     list_agents[index_datapoint] = i
                     list_vehicles[index_datapoint] = vehicle
                     list_value[index_datapoint] = distance_from_dest.item()
+                    list_is_baseline[index_datapoint] = False
                     index_datapoint = index_datapoint +1
-# Baseline 1: Shortest path
+# Baseline 1: one-shot
+list_is_baseline_2[index_horizon]="Single-shot"
+index_horizon = index_horizon+1
+for t in range(T_simulation):
+    for test in range(N_tests):
+        for i in range(N_agents):
+            for vehicle in range(N_vehicles):
+                current_node = visited_nodes_oneshot[test, i, vehicle, t]
+                distance_oneshot = cost_SP[test, i, int(current_node.item())]
+                list_tests[index_datapoint] = test
+                list_timestep[index_datapoint] = t
+                list_T_horiz[index_datapoint] = "Single-shot"
+                list_agents[index_datapoint] = i
+                list_vehicles[index_datapoint] = 0
+                list_value[index_datapoint] = distance_oneshot.item()
+                list_is_baseline[index_datapoint] = True
+                index_datapoint = index_datapoint + 1
+# Baseline 2: Shortest path
+list_is_baseline_2[index_horizon]="SP"
+index_horizon = index_horizon+1
 for t in range(T_simulation):
     for test in range(N_tests):
         for i in range(N_agents):
@@ -164,24 +189,14 @@ for t in range(T_simulation):
             list_agents[index_datapoint] = i
             list_vehicles[index_datapoint] = 0
             list_value[index_datapoint] = distance_baseline
+            list_is_baseline[index_datapoint] = True
             index_datapoint = index_datapoint + 1
-# Baseline 2: one-shot
-for t in range(T_simulation):
-    for test in range(N_tests):
-        for i in range(N_agents):
-            for vehicle in range(N_vehicles):
-                current_node = visited_nodes_oneshot[test, i, vehicle, t]
-                distance_oneshot = cost_SP[test, i, int(current_node.item())]
-                list_tests[index_datapoint] = test
-                list_timestep[index_datapoint] = t
-                list_T_horiz[index_datapoint] = "Single-shot"
-                list_agents[index_datapoint] = i
-                list_vehicles[index_datapoint] = 0
-                list_value[index_datapoint] = distance_oneshot.item()
-                index_datapoint = index_datapoint + 1
-distance_from_dest_dataframe = pd.DataFrame(list(zip(list_tests, list_timestep, list_T_horiz, list_agents, list_vehicles, list_value)), columns=['test', 't', 'T horizon', 'agent','vehicle', 'Distance from endpoint'])
 
-sns.lineplot(data = distance_from_dest_dataframe, ci=None , x='t', y='Distance from endpoint', hue='T horizon')
+distance_from_dest_dataframe = pd.DataFrame(list(zip(list_tests, list_timestep, list_T_horiz, list_agents, list_vehicles, list_value, list_is_baseline)),
+                                            columns=['test', 't', 'T horizon', 'agent','vehicle', 'Distance from endpoint', 'Baseline'])
+dic_dashes = {False:'', True:(2,2)}
+sns.lineplot(data=distance_from_dest_dataframe, ci=None , x='t', palette=['m', 'g', 'c','b', 'r', 'k'], y='Distance from endpoint', hue='T horizon', style=list_is_baseline, dashes=dic_dashes)
+plt.legend(labels=list_is_baseline_2)
 ax.set_ylim([0, 3])
 ax.set_xlim([0, T_simulation - 1])
 
@@ -265,7 +280,7 @@ for test in range(N_tests):
     list_value[index_datapoint] = (social_cost_baseline - social_cost_oneshot) / social_cost_baseline
     index_datapoint = index_datapoint + 1
 social_cost_dataframe = pd.DataFrame(list(zip(list_tests,list_T_horiz, list_value)), columns=['test', 'T horiz', 'value'])
-ax = sns.boxplot(x ="T horiz" ,y="value", data=social_cost_dataframe, palette="muted", medianprops={'color': 'lime', 'lw': 2})
+ax = sns.boxplot(x ="T horiz" ,y="value", data=social_cost_dataframe, palette=['m','g', 'c', 'b', 'r'], medianprops={'color': 'lime', 'lw': 2})
 ax.set_ylabel(r'$\frac{\sum_i J_i(x_b) - J_i(x^{\star})}{\sum_i J_i(x_b)}$ ')
 ax.set_xlabel(r'Horizon')
 ax.grid(True)
