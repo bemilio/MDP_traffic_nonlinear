@@ -12,8 +12,8 @@ import matplotlib.pyplot as plt
 
 plt.rcParams.update({
     "text.usetex": True,
-    "font.family": "serif",
-    "font.serif": ["Palatino"],
+    "font.family": "STIXGeneral",
+    "font.serif": ["Computer Modern Roman"],
 })
 import networkx as nx
 import numpy as np
@@ -21,8 +21,8 @@ import pickle
 import torch
 from Utilities.plot_agent_route import plot_agent_route
 
-# f = open('/Users/ebenenati/surfdrive/TUDelft/Simulations/MDP_traffic_nonlinear/29_aug_22/saved_test_result.pkl', 'rb')
-f = open('saved_test_result.pkl', 'rb')
+f = open('/Users/ebenenati/surfdrive/TUDelft/Simulations/MDP_traffic_nonlinear/29_aug_22/saved_test_result.pkl', 'rb')
+# f = open('saved_test_result.pkl', 'rb')
 ## Data structure:
 ## x: Tensor with dimension (n. random tests, N agents, n variables)
 ## dual: Tensor with dimension (n. random tests, n constraints, )
@@ -308,7 +308,7 @@ plt.savefig('3_comparison_social_welfare.pdf')
 plt.show(block=False)
 
 ### Plot #4 : expected value congestion error vs. # of agents
-
+fig, ax = plt.subplots(figsize=(5, 1.8), layout='constrained')
 # Preliminaries: generate realization of probabilistic controller FOR ALL NUMBER OF VEHICLES PER AGENT
 N_vehicles_per_agent = [ 10**1, 10**2, 10**3]
 N_tests_sample_size = np.size(N_vehicles_per_agent)
@@ -376,15 +376,15 @@ for index_n in range(N_tests_sample_size):
     for i_test in range(N_tests):
         for i_edge in range(N_edges):
             for t in range(T_horiz):
-                if cost_edges_expected[index_n, i_test, i_edge, t].item() >= 0.01:
-                    cost_diff = np.abs(cost_edges_expected[index_n, i_test, i_edge, t].item()-cost_edges_real[index_n, i_test, i_edge, t].item())
+                if cost_edges_expected[index_n, i_test, i_edge, t].item() >= 0.0001:
+                    cost_diff = np.abs(cost_edges_expected[index_n, i_test, i_edge, t].item()-cost_edges_real[index_n, i_test, i_edge, t].item())/cost_edges_expected[index_n, i_test, i_edge, t].item()
                     s_row = pd.DataFrame([[n, cost_diff ]],
                                          columns=['n_vehicles', 'sample'])
                     cost_dataframe_comparison = cost_dataframe_comparison.append(s_row)
 
 ax = sns.boxplot(x='n_vehicles', y='sample', data=cost_dataframe_comparison, palette="muted")
 ax.set_xlabel("Vehicles per agent")
-ax.set_ylabel(r'$ \sum_{e\in\mathcal E, t} | \ell(\sigma^{e, t}) - \ell(\hat\sigma^{e, t})|$')
+ax.set_ylabel(r'$ \sum_{e\in\mathcal E, t} \frac{| \ell_e(\sigma^{\text{M}}_{e,t}) - \ell_e(\hat\sigma^{\text{M}}_{e,t})|}{\ell_e(\sigma^{\text{M}}_{e, t})}$', fontsize=13)
 ax.set_yscale('log')
 ax.set_ylim([-0.1, 5])
 ax.grid(True)
