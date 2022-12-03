@@ -33,22 +33,22 @@ def set_stepsizes(N, road_graph, A_ineq_shared, algorithm='FRB'):
 if __name__ == '__main__':
     logging.basicConfig(filename='log.txt', filemode='w',level=logging.DEBUG)
     use_test_graph = True
-    N_random_tests = 3
+    N_random_tests = 100
     N_vehicles_per_agent = 1000
     print("Initializing road graph...")
     N_agents=8   # N agents
     f = open('test_graph.pkl', 'rb')
     Road_graph = pickle.load(f)
     f.close()
-    T_horiz_to_test= [8]
-    T_simulation=8
+    T_horiz_to_test= [1,3,4,5,8]
+    T_simulation=10
 
     n_juncs = len(Road_graph.nodes)
     print("Done")
     print("Running simulation with ", n_juncs," nodes and", N_agents," agents")
 
     np.random.seed(1)
-    N_iter=10000
+    N_iter=50000
     # containers for saved variables
     x_hsdm={}
     x_not_hsdm={}
@@ -126,7 +126,7 @@ if __name__ == '__main__':
                         logging.info("Iteration " + str(k) + " Residual: " + str(r.item()) + " Average time: " + str(
                             avg_time_per_it))
                         index_store = index_store + 1
-                        if r <= 10 ** (-4):
+                        if r <= 10 ** (-3):
                             break
                 # store results
                 x, d, r, c = alg.get_state()

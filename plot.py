@@ -308,7 +308,7 @@ plt.savefig('3_comparison_social_welfare.pdf')
 plt.show(block=False)
 
 ### Plot #4 : expected value congestion error vs. # of agents
-fig, ax = plt.subplots(figsize=(5, 1.8), layout='constrained')
+fig, ax = plt.subplots(figsize=(4, 1.5), layout='constrained')
 # Preliminaries: generate realization of probabilistic controller FOR ALL NUMBER OF VEHICLES PER AGENT
 N_vehicles_per_agent = [ 10**1, 10**2, 10**3]
 N_tests_sample_size = np.size(N_vehicles_per_agent)
@@ -382,16 +382,19 @@ for index_n in range(N_tests_sample_size):
                                          columns=['n_vehicles', 'sample'])
                     cost_dataframe_comparison = cost_dataframe_comparison.append(s_row)
 
-ax = sns.boxplot(x='n_vehicles', y='sample', data=cost_dataframe_comparison, palette="muted")
-ax.set_xlabel("Vehicles per agent")
-ax.set_ylabel(r'$ \sum_{e\in\mathcal E, t} \frac{| \ell_e(\sigma^{\text{M}}_{e,t}) - \ell_e(\hat\sigma^{\text{M}}_{e,t})|}{\ell_e(\sigma^{\text{M}}_{e, t})}$', fontsize=13)
+ax = sns.boxplot(x='n_vehicles', y='sample', data=cost_dataframe_comparison, flierprops={"marker": "x"}, palette="muted")
+ax.set_xlabel("\# vehicles per population", fontsize=9)
+ax.set_ylabel(r'$\sum_{e, t} \frac{| \ell_e(\sigma^{{M}}_{e,t}) '
+              r'- \ell_e(\hat\sigma^{{M}}_{e,t})|}{\ell_e(\sigma^{{M}}_{e, t})}$', fontsize=9)
 ax.set_yscale('log')
 ax.set_ylim([-0.1, 5])
 ax.grid(True)
-plt.savefig('4_comparison_expected_congestion.png')
-plt.savefig('4_comparison_expected_congestion.pdf')
+fig.savefig('4_comparison_expected_congestion.png')
+fig.savefig('4_comparison_expected_congestion.pdf')
 
 plt.show(block="False")
 
-
+f = open('saved_dataframes.pkl', 'wb')
+pickle.dump([cost_dataframe_comparison, costs_dataframe, congestion_dataframe], f)
+f.close()
 print("Done")

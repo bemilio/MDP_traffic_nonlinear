@@ -11,8 +11,8 @@ import matplotlib.pyplot as plt
 
 plt.rcParams.update({
     "text.usetex": True,
-    "font.family": "serif",
-    "font.serif": ["Palatino"],
+    "font.family": "STIXGeneral",
+    "font.serif": ["Computer Modern Roman"],
 })
 import networkx as nx
 import numpy as np
@@ -21,12 +21,16 @@ import torch
 from Utilities.plot_agent_route import plot_agent_route
 
 f = open('/Users/ebenenati/surfdrive/TUDelft/Simulations/MDP_traffic_nonlinear/13_oct_22/saved_test_result_multiperiod.pkl', 'rb')
-# f = open('saved_test_result_multiperiod.pkl', 'rb')
 ## Data structure:
 ## visited_nodes: dictionary with keys (index test, T_horiz) whose elements are tensors with dimension (N_agents, N_vehicles, T_horiz+1)
 x_store, x_oneshot_store, visited_nodes, road_graph, edge_time_to_index_oneshot, node_time_to_index_oneshot, T_horiz_tested, T_simulation, \
 initial_junctions_stored, final_destinations_stored, congestion_baseline_stored, cost_baseline, N_tests =  pickle.load(f)
 f.close()
+
+
+# f = open('saved_multiperiod_dataframes.pkl', 'rb')
+# distance_from_dest_dataframe, social_cost_dataframe = pickle.load(f)
+# f.close()
 
 # f = open('realization_oneshot.pkl', 'wb')
 # visited_nodes_oneshot, count_edge_taken_at_time_oneshot = pickle.load(f)
@@ -35,6 +39,15 @@ N_agents = visited_nodes[(0, T_horiz_tested[0])].size(0)
 N_edges = road_graph.number_of_edges()
 N_vertices = road_graph.number_of_nodes()
 N_vehicles = visited_nodes[(0, T_horiz_tested[0])].size(1)
+T_horiz_to_plot_1 = [1,3,8]
+T_horiz_to_plot_2 = [1,3,5,8]
+
+for T in T_horiz_to_plot_1:
+    if T not in T_horiz_tested:
+        raise("Requested plot of non existing horizon")
+for T in T_horiz_to_plot_2:
+    if T not in T_horiz_tested:
+        raise ("Requested plot of non existing horizon")
 
 torch.Tensor.ndim = property(lambda self: len(self.shape))  # Necessary to use matplotlib with tensors
 
@@ -80,42 +93,49 @@ for T_horiz in T_horiz_tested:
             ratio_vehicles_reached_final_dest = ratio_vehicles_reached_final_dest + \
                 np.count_nonzero(visited_nodes[test, T_horiz][agent,:, -1] == final_destinations_stored[test][agent] ) / total_vehicles_and_tests
 print("The percentage of vehicles that reached the final destination is " + str(ratio_vehicles_reached_final_dest*100))
-
+# f=open("saved_oneshot_sol.pkl", 'wb')
+# pickle.dump(visited_nodes_oneshot, count_edge_taken_at_time_oneshot, f)
+# f.close()
+# f=open("saved_oneshot_sol.pkl", 'rb')
+# visited_nodes_oneshot = pickle.load(f)
+# f.close()
 # Plot how much time to reach destination
-fig, ax = plt.subplots(figsize=(5 * 1, 3.6 * 1), layout='constrained')
-
-N_datapoints = N_tests * len(T_horiz_tested) * N_agents * N_vehicles
-list_tests = np.zeros(N_datapoints)
-list_T_horiz = np.zeros(N_datapoints)
-list_agents = np.zeros(N_datapoints)
-list_vehicles = np.zeros(N_datapoints)
-list_value = np.zeros(N_datapoints)
-index_datapoint =0
-for test in range(N_tests):
-    for agent in range(N_agents):
-        SP_length = nx.shortest_path_length(road_graph, source=initial_junctions_stored[test][agent],
-                                target=final_destinations_stored[test][agent])
-        for T_horiz in T_horiz_tested:
-            for vehicle in range(N_vehicles):
-                is_destination_reached = ((visited_nodes[(test, T_horiz)][agent, vehicle, :] == final_destinations_stored[test][agent]).nonzero().numel() >0)
-                if is_destination_reached:
-                    time_destination = \
-                        (visited_nodes[(test, T_horiz)][agent, vehicle, :] == final_destinations_stored[test][agent]).nonzero()[0].item() - SP_length
-                else:
-                    time_destination = 10
-                list_tests[index_datapoint] = test
-                list_T_horiz[index_datapoint] = T_horiz
-                list_agents[index_datapoint] = agent
-                list_vehicles[index_datapoint] = vehicle
-                list_value[index_datapoint] = time_destination
-                index_datapoint = index_datapoint +1
-time_destination_dataframe = pd.DataFrame(list(zip(list_tests, list_T_horiz, list_agents, list_vehicles, list_value)), columns=['test', 'T horiz', 'agent','vehicle', 'value'])
-ax = sns.boxplot(x = "T horiz", y="value", data=time_destination_dataframe, palette="hls", medianprops={'color': 'lime', 'lw': 2})
-ax.grid(True)
-plt.show(block=False)
+# fig, ax = plt.subplots(figsize=(5 * 1, 3.6 * 1), layout='constrained')
+#
+#
+#
+# N_datapoints = N_tests * len(T_horiz_tested) * N_agents * N_vehicles
+# list_tests = np.zeros(N_datapoints)
+# list_T_horiz = np.zeros(N_datapoints)
+# list_agents = np.zeros(N_datapoints)
+# list_vehicles = np.zeros(N_datapoints)
+# list_value = np.zeros(N_datapoints)
+# index_datapoint =0
+# for test in range(N_tests):
+#     for agent in range(N_agents):
+#         SP_length = nx.shortest_path_length(road_graph, source=initial_junctions_stored[test][agent],
+#                                 target=final_destinations_stored[test][agent])
+#         for T_horiz in T_horiz_to_plot_1:
+#             for vehicle in range(N_vehicles):
+#                 is_destination_reached = ((visited_nodes[(test, T_horiz)][agent, vehicle, :] == final_destinations_stored[test][agent]).nonzero().numel() >0)
+#                 if is_destination_reached:
+#                     time_destination = \
+#                         (visited_nodes[(test, T_horiz)][agent, vehicle, :] == final_destinations_stored[test][agent]).nonzero()[0].item() - SP_length
+#                 else:
+#                     time_destination = 10
+#                 list_tests[index_datapoint] = test
+#                 list_T_horiz[index_datapoint] = T_horiz
+#                 list_agents[index_datapoint] = agent
+#                 list_vehicles[index_datapoint] = vehicle
+#                 list_value[index_datapoint] = time_destination
+#                 index_datapoint = index_datapoint +1
+# time_destination_dataframe = pd.DataFrame(list(zip(list_tests, list_T_horiz, list_agents, list_vehicles, list_value)), columns=['test', 'T horiz', 'agent','vehicle', 'value'])
+# ax = sns.boxplot(x = "T horiz", y="value", data=time_destination_dataframe, palette="hls", medianprops={'color': 'lime', 'lw': 2})
+# ax.grid(True)
+# plt.show(block=False)
 
 # Plot distance from  destination over time
-fig, ax = plt.subplots(figsize=(5 * 1, 3.6 * 1), layout='constrained')
+fig, ax = plt.subplots(figsize=(4 * 1, 2.1 * 1), layout='constrained')
 distance_from_dest_dataframe = pd.DataFrame()
 SP = {}
 for test in range(N_tests):
@@ -127,7 +147,7 @@ for test in range(N_tests):
         for i in range(N_agents):
             cost_SP[test, i, a]=nx.shortest_path_length(road_graph, source=a, target = final_destinations_stored[test][i])
 
-N_datapoints = N_tests * len(T_horiz_tested) * T_simulation * N_agents * N_vehicles + T_simulation * N_tests * N_agents \
+N_datapoints = N_tests * len(T_horiz_to_plot_1) * T_simulation * N_agents * N_vehicles + T_simulation * N_tests * N_agents \
                + T_simulation * N_tests * N_agents * N_vehicles
 list_tests = [None] *N_datapoints
 list_T_horiz = [None] *N_datapoints
@@ -136,10 +156,10 @@ list_agents = [None] *N_datapoints
 list_vehicles = [None] *N_datapoints
 list_value = [None] *N_datapoints
 list_is_baseline = [None] *N_datapoints
-list_is_baseline_2= [None] * (len(T_horiz_tested) + 2)
+list_is_baseline_2= [None] * (len(T_horiz_to_plot_1) + 2)
 index_datapoint =0
 index_horizon = 0
-for T_horiz in T_horiz_tested:
+for T_horiz in T_horiz_to_plot_1:
     list_is_baseline_2[index_horizon]=T_horiz
     index_horizon = index_horizon+1
     for t in range(T_simulation):
@@ -157,7 +177,7 @@ for T_horiz in T_horiz_tested:
                     list_is_baseline[index_datapoint] = False
                     index_datapoint = index_datapoint +1
 # Baseline 1: one-shot
-list_is_baseline_2[index_horizon]="Single-shot"
+list_is_baseline_2[index_horizon]="Open loop"
 index_horizon = index_horizon+1
 for t in range(T_simulation):
     for test in range(N_tests):
@@ -167,7 +187,7 @@ for t in range(T_simulation):
                 distance_oneshot = cost_SP[test, i, int(current_node.item())]
                 list_tests[index_datapoint] = test
                 list_timestep[index_datapoint] = t
-                list_T_horiz[index_datapoint] = "Single-shot"
+                list_T_horiz[index_datapoint] = "Open loop"
                 list_agents[index_datapoint] = i
                 list_vehicles[index_datapoint] = 0
                 list_value[index_datapoint] = distance_oneshot.item()
@@ -195,21 +215,21 @@ for t in range(T_simulation):
 distance_from_dest_dataframe = pd.DataFrame(list(zip(list_tests, list_timestep, list_T_horiz, list_agents, list_vehicles, list_value, list_is_baseline)),
                                             columns=['test', 't', 'T horizon', 'agent','vehicle', 'Distance from endpoint', 'Baseline'])
 dic_dashes = {False:'', True:(2,2)}
-sns.lineplot(data=distance_from_dest_dataframe, ci=None , x='t', palette=['m', 'g', 'c','b', 'r', 'k'], y='Distance from endpoint', hue='T horizon', style=list_is_baseline, dashes=dic_dashes)
+sns.lineplot(data=distance_from_dest_dataframe, drawstyle='steps-pre', ci=None , x='t', palette=['lime', 'c','b', 'r', 'k'], y='Distance from endpoint', hue='T horizon', style=list_is_baseline, dashes=dic_dashes)
 plt.legend(labels=list_is_baseline_2)
-ax.set_ylim([0, 3])
+ax.set_ylim([0, 2])
 ax.set_xlim([0, T_simulation - 1])
 
 ax.grid(True)
-ax.set_ylabel('Average distance from endpoint (N. of junctions)')
-ax.set_xlabel('Timestep')
-plt.savefig('1_multiperiod_average_distance.png')
-plt.savefig('1_multiperiod_average_distance.pdf')
+ax.set_ylabel('Nodes to destination (avg.)', fontsize = 9)
+ax.set_xlabel('Timestep', fontsize = 9)
+fig.savefig('1_multiperiod_average_distance.png')
+fig.savefig('1_multiperiod_average_distance.pdf')
 
 plt.show(block=False)
 
 #### Plot how much cost incurred to reach destination
-fig, ax = plt.subplots(figsize=(5 * 1, 3.6 * 1), layout='constrained')
+fig, ax = plt.subplots(figsize=(4, 1.5), layout='constrained')
 
 # compute congestions
 count_edge_taken_at_time = {} # count how many vehicles pass by the edge at time t
@@ -230,7 +250,7 @@ list_tests = np.zeros(N_datapoints)
 list_T_horiz = [None] *N_datapoints
 list_value = np.zeros(N_datapoints)
 index_datapoint =0
-for T_horiz in T_horiz_tested:
+for T_horiz in T_horiz_to_plot_2:
     for test in range(N_tests):
         social_cost=0
         social_cost_baseline=0
@@ -252,7 +272,7 @@ for T_horiz in T_horiz_tested:
                 social_cost_baseline = social_cost_baseline + cost_partial_baseline
         list_tests[index_datapoint] = test
         list_T_horiz[index_datapoint] = int(T_horiz)
-        list_value[index_datapoint] = (social_cost_baseline - social_cost) / social_cost_baseline
+        list_value[index_datapoint] = (social_cost - social_cost_baseline ) / social_cost_baseline
         index_datapoint = index_datapoint +1
 # Compute one shot social cost
 for test in range(N_tests):
@@ -276,23 +296,23 @@ for test in range(N_tests):
             social_cost_oneshot = social_cost_oneshot + cost_partial_oneshot
             social_cost_baseline = social_cost_baseline + cost_partial_baseline
     list_tests[index_datapoint] = test
-    list_T_horiz[index_datapoint] = "Single-shot"
-    list_value[index_datapoint] = (social_cost_baseline - social_cost_oneshot) / social_cost_baseline
+    list_T_horiz[index_datapoint] = "Open loop"
+    list_value[index_datapoint] = (social_cost_oneshot - social_cost_baseline) / social_cost_baseline
     index_datapoint = index_datapoint + 1
 social_cost_dataframe = pd.DataFrame(list(zip(list_tests,list_T_horiz, list_value)), columns=['test', 'T horiz', 'value'])
-ax = sns.boxplot(x ="T horiz" ,y="value", data=social_cost_dataframe, palette=['m','g', 'c', 'b', 'r'], medianprops={'color': 'lime', 'lw': 2})
-ax.set_ylabel(r'$\frac{\sum_i J_i(x_b) - J_i(x^{\star})}{\sum_i J_i(x_b)}$ ')
+ax = sns.boxplot(x ="T horiz" ,y="value", data=social_cost_dataframe, palette=['lime', 'c', 'm', 'b', 'r'], medianprops={'color': 'k', 'lw': 2})
+ax.set_ylabel(r'$\frac{\sum_i J_i(x^{*})-J_i(x_{SP})}{\sum_i J_i(x_{SP})}$ ')
 ax.set_xlabel(r'Horizon')
 ax.grid(True)
-plt.savefig('2_multiperiod_advantage.png')
-plt.savefig('2_multiperiod_advantage.pdf')
+fig.savefig('2_multiperiod_advantage.png')
+fig.savefig('2_multiperiod_advantage.pdf')
 plt.show(block=False)
 
 
 # Save dataframes
 
 f = open('saved_multiperiod_dataframes.pkl', 'wb')
-pickle.dump([distance_from_dest_dataframe, social_cost_dataframe], f)
+pickle.dump([distance_from_dest_dataframe, social_cost_dataframe, list_is_baseline], f)
 f.close()
 
 print("Done")
