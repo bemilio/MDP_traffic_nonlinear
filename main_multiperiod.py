@@ -54,6 +54,8 @@ if __name__ == '__main__':
     else:
         seed=int(sys.argv[1])
         job_id = int(sys.argv[2])
+    print("Random seed set to  " + str(seed))
+    logging.info("Random seed set to  " + str(seed))
     np.random.seed(seed)
     N_iter=50000
     # containers for saved variables
