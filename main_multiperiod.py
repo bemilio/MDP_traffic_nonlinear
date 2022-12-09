@@ -6,6 +6,8 @@ from FRB_algorithm import FRB_algorithm
 from GameDefinition import Game
 import time
 import logging
+import sys
+
 from operator import itemgetter
 
 def set_stepsizes(N, road_graph, A_ineq_shared, algorithm='FRB'):
@@ -33,7 +35,7 @@ def set_stepsizes(N, road_graph, A_ineq_shared, algorithm='FRB'):
 if __name__ == '__main__':
     logging.basicConfig(filename='log.txt', filemode='w',level=logging.DEBUG)
     use_test_graph = True
-    N_random_tests = 100
+    N_random_tests = 1
     N_vehicles_per_agent = 1000
     print("Initializing road graph...")
     N_agents=8   # N agents
@@ -46,8 +48,13 @@ if __name__ == '__main__':
     n_juncs = len(Road_graph.nodes)
     print("Done")
     print("Running simulation with ", n_juncs," nodes and", N_agents," agents")
-
-    np.random.seed(1)
+    if len(sys.argv) < 2:
+        seed = 0
+        job_id=0
+    else:
+        seed=int(sys.argv[1])
+        job_id = int(sys.argv[2])
+    np.random.seed(seed)
     N_iter=50000
     # containers for saved variables
     x_hsdm={}
@@ -126,7 +133,7 @@ if __name__ == '__main__':
                         logging.info("Iteration " + str(k) + " Residual: " + str(r.item()) + " Average time: " + str(
                             avg_time_per_it))
                         index_store = index_store + 1
-                        if r <= 10 ** (-3):
+                        if r <= 5*10 ** (-3):
                             break
                 # store results
                 x, d, r, c = alg.get_state()
@@ -171,7 +178,7 @@ if __name__ == '__main__':
                         alg.run_once()
                         if k % 100 == 0:
                             x, d, r, c = alg.get_state()
-                            if r <= 10 ** (-4):
+                            if r <= 10 ** (-3):
                                 break
                             print("Iteration (one-shot solution): " + str(k) + " Residual: " + str(r.item()))
                             logging.info("Iteration (one-shot solution): " + str(k) + " Residual: " + str(r.item()))
@@ -183,7 +190,8 @@ if __name__ == '__main__':
 
     print("Saving results...")
     logging.info("Saving results...")
-    f = open('saved_test_result_multiperiod.pkl', 'wb')
+    filename = "saved_test_result_multiperiod_" + str(job_id) + ".pkl"
+    f = open(filename, 'wb')
     pickle.dump([ x_store, x_oneshot_store, visited_nodes, Road_graph, edge_time_to_index_oneshot, node_time_to_index_oneshot, T_horiz_to_test, T_simulation, \
                  initial_junctions_stored, final_destinations_stored, congestion_baseline, cost_baseline, N_random_tests], f)
     f.close()

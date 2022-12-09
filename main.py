@@ -3,7 +3,6 @@ import networkx as nx
 import torch
 import pickle
 from FRB_algorithm import FRB_algorithm
-from FBF_algorithm import FBF_algorithm
 
 from GameDefinition import Game
 import time

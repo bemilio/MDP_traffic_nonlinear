@@ -1,9 +1,7 @@
 import logging
-import warnings
 
 import scipy.linalg
 import torch
-from qpth.qp import QPFunction, QPSolvers
 import numpy as np
 import osqp
 from scipy import sparse
