@@ -28,9 +28,6 @@ def compute_quartiles(vec):
 def compute_95_confidence(vec):
     return np.percentile(vec, 5) , np.percentile(vec, 95)
 
-#f = open('/Users/ebenenati/surfdrive/TUDelft/Simulations/MDP_traffic_nonlinear/29_aug_22/saved_test_result.pkl', 'rb')
-# f = open(r"D:\cloud_files\owncloud_2\TUDelft\Simulations\MDP_traffic_nonlinear\29_aug_22\saved_test_result.pkl", 'rb')
-
 f = open('saved_test_result.pkl', 'rb')
 
 ## Data structure:
@@ -40,7 +37,6 @@ f = open('saved_test_result.pkl', 'rb')
 x, dual, residual, cost, road_graph, edge_time_to_index, node_time_to_index, T_horiz, initial_junctions, final_destinations, \
 congestion_baseline_stored, cost_baseline_stored = pickle.load(f)
 f.close()
-
 # f = open("saved_dataframes.pkl", 'rb')
 # cost_dataframe_comparison, costs_dataframe, congestion_dataframe = pickle.load(f)
 # f.close()
@@ -60,29 +56,29 @@ torch.Tensor.ndim = property(lambda self: len(self.shape))  # Necessary to use m
 # pos = nx.get_node_attributes(road_graph, 'pos')
 #
 # # Toggle for multiple grrpahs
-# for t in range(T_horiz):
-# # for t in range(1):
-#     colors = []
-#     edgelist = []
-#     nodes = []
-#     for edge in road_graph.edges:
-#         if not edge[0] == edge[1]:
-#             color_edge = np.matrix([0])
-#             congestion = torch.sum(x[0, :, edge_time_to_index[(edge, t)]], 0) / N_agents
-#             color_edge = congestion
-#             colors.append(int(256 * color_edge))
-#             edgelist.append(edge)
-#     for node in road_graph.nodes:
-#         nodes.append(node)
-#     pos = nx.kamada_kawai_layout(road_graph)
-#     plt.sca(ax[t, 0])
-#     nx.draw_networkx_nodes(road_graph, pos=pos, nodelist=nodes, node_size=120, node_color='cyan')
-#     nx.draw_networkx_labels(road_graph, pos)
-#     # Toggle to color edges based on congestion
-#     nx.draw_networkx_edges(road_graph, pos=pos, edge_color=colors, edgelist=edgelist, edge_cmap=plt.cm.cool,
-#                            connectionstyle='arc3, rad = 0.1')
-    # nx.draw_networkx_edges(road_graph, pos=pos, edgelist=edgelist,
-    #                        connectionstyle='arc3, rad = 0.2')
+for t in range(T_horiz):
+# for t in range(1):
+    colors = []
+    edgelist = []
+    nodes = []
+    for edge in road_graph.edges:
+        if not edge[0] == edge[1]:
+            color_edge = np.matrix([0])
+            congestion = torch.sum(x[0, :, edge_time_to_index[(edge, t)]], 0) / N_agents
+            color_edge = congestion
+            colors.append(int(256 * color_edge))
+            edgelist.append(edge)
+    for node in road_graph.nodes:
+        nodes.append(node)
+    pos = nx.kamada_kawai_layout(road_graph)
+    plt.sca(ax[t, 0])
+    nx.draw_networkx_nodes(road_graph, pos=pos, nodelist=nodes, node_size=120, node_color='cyan')
+    nx.draw_networkx_labels(road_graph, pos)
+    # Toggle to color edges based on congestion
+    nx.draw_networkx_edges(road_graph, pos=pos, edge_color=colors, edgelist=edgelist, edge_cmap=plt.cm.cool,
+                           connectionstyle='arc3, rad = 0.1')
+    nx.draw_networkx_edges(road_graph, pos=pos, edgelist=edgelist,
+                           connectionstyle='arc3, rad = 0.2')
 # Draw baseline
 # for t in range(T_horiz):
 #     colors = []
@@ -128,9 +124,8 @@ plt.xlabel('Iteration')
 plt.ylabel('Residual')
 plt.legend()
 plt.grid(True)
-plt.savefig('1_residual.png')
-plt.savefig('1_residual.pdf')
-
+plt.savefig('Figures/1_residual.png')
+plt.savefig('Figures/1_residual.pdf')
 plt.show()
 
 
@@ -240,8 +235,8 @@ plt.legend(prop={'size': 8})
 ax.set_xlabel(r'edge')
 ax.set_ylabel(r'congestion')
 ax.set_ylim([-0.1, 1.5])
-plt.savefig('2_comparison_congestions.png')
-plt.savefig('2_comparison_congestions.pdf')
+plt.savefig('Figures/2_comparison_congestions.png')
+plt.savefig('Figures/2_comparison_congestions.pdf')
 
 plt.show(block=False)
 
@@ -324,8 +319,8 @@ ax.grid(True)
 
 ax.set_xlabel(r'$\frac{\sum_i J_i(x_b) - J_i(x^{\star})}{\sum_i J_i(x_b)}$ ')
 
-plt.savefig('3_comparison_social_welfare.png')
-plt.savefig('3_comparison_social_welfare.pdf')
+plt.savefig('Figures/3_comparison_social_welfare.png')
+plt.savefig('Figures/3_comparison_social_welfare.pdf')
 
 plt.show(block=False)
 
@@ -412,8 +407,8 @@ ax.set_yscale('log')
 ax.set_ylim([-0.1, 5])
 ax.set_yticklabels([str(int(k*100))+r'\%' if k!=0 else r'$\pm$'+str(int(k*100))+r'\%' for k in ax.get_yticks()])
 ax.grid(True)
-fig.savefig('4_comparison_expected_congestion.png')
-fig.savefig('4_comparison_expected_congestion.pdf')
+fig.savefig('Figures/4_comparison_expected_congestion.png')
+fig.savefig('Figures/4_comparison_expected_congestion.pdf')
 
 plt.show(block="False")
 
