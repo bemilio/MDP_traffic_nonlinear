@@ -1,6 +1,7 @@
 import matplotlib as mpl
 import seaborn as sns
 import pandas as pd
+import statistics as stat
 from cmath import inf
 from Utilities.generate_permutations import generate_permutations
 from Utilities.multinomial_factor import multinomial_factor
@@ -21,8 +22,17 @@ import pickle
 import torch
 from Utilities.plot_agent_route import plot_agent_route
 
-f = open('/Users/ebenenati/surfdrive/TUDelft/Simulations/MDP_traffic_nonlinear/29_aug_22/saved_test_result.pkl', 'rb')
-# f = open('saved_test_result.pkl', 'rb')
+def compute_quartiles(vec):
+    return np.percentile(vec, 25) , np.percentile(vec, 75)
+
+def compute_95_confidence(vec):
+    return np.percentile(vec, 5) , np.percentile(vec, 95)
+
+#f = open('/Users/ebenenati/surfdrive/TUDelft/Simulations/MDP_traffic_nonlinear/29_aug_22/saved_test_result.pkl', 'rb')
+# f = open(r"D:\cloud_files\owncloud_2\TUDelft\Simulations\MDP_traffic_nonlinear\29_aug_22\saved_test_result.pkl", 'rb')
+
+f = open('saved_test_result.pkl', 'rb')
+
 ## Data structure:
 ## x: Tensor with dimension (n. random tests, N agents, n variables)
 ## dual: Tensor with dimension (n. random tests, n constraints, )
@@ -30,6 +40,10 @@ f = open('/Users/ebenenati/surfdrive/TUDelft/Simulations/MDP_traffic_nonlinear/2
 x, dual, residual, cost, road_graph, edge_time_to_index, node_time_to_index, T_horiz, initial_junctions, final_destinations, \
 congestion_baseline_stored, cost_baseline_stored = pickle.load(f)
 f.close()
+
+# f = open("saved_dataframes.pkl", 'rb')
+# cost_dataframe_comparison, costs_dataframe, congestion_dataframe = pickle.load(f)
+# f.close()
 
 N_tests = x.size(0)
 N_agents = x.size(1)
@@ -41,7 +55,6 @@ N_vertices = road_graph.number_of_nodes()
 torch.Tensor.ndim = property(lambda self: len(self.shape))  # Necessary to use matplotlib with tensors
 
 #Plot # 0: road graph
-# Toggle for multiple graphs
 # fig, ax = plt.subplots(T_horiz, 2, figsize=(5, 10 * 1.4), layout='constrained')
 # # fig, ax = plt.subplots(1, 1, figsize=(5, 2.6), layout='constrained')
 # pos = nx.get_node_attributes(road_graph, 'pos')
@@ -196,14 +209,23 @@ for i_test in range(N_tests):
         s_row = pd.DataFrame([[i_test, edge, 'Proposed', congestions[i_test, edge].item()]],
                              columns=['test', 'edge', 'method', 'value'])
         congestion_dataframe = congestion_dataframe.append(s_row)
-        s_row = pd.DataFrame([[i_test, edge, 'Baseline', congestion_baseline[i_test, edge].item()]],
+        s_row = pd.DataFrame([[i_test, edge, 'SP', congestion_baseline[i_test, edge].item()]],
                              columns=['test', 'edge', 'method', 'value'])
         congestion_dataframe = congestion_dataframe.append(s_row)
 
 if N_tests >= 2:
-    ax.axhline(y=1, linewidth=2, color='red', label="Road limit")
-    ax.axhline(y= 0.1/0.2, linewidth=2, color='gold', linestyle='--', label="Free-flow limit")
-    ax = sns.boxplot(x="edge", y="value", hue="method", data=congestion_dataframe, palette="muted", medianprops={'color': 'lime', 'lw': 2})
+    ax.axhline(y=1, linewidth=2, color='black', label="Road limit")
+    ax.axhline(y=  0.1/0.2, linewidth=1, color='black', linestyle='--', label="Free-flow limit")
+    palette_pastel_custom = [sns.color_palette("pastel")[0], sns.color_palette("pastel")[3] ]
+    palette_bright_custom = [sns.color_palette("bright")[0], sns.color_palette("bright")[3]]
+    palette_bright_blue = [sns.color_palette("bright")[0]]
+    palette_bright_red = [sns.color_palette("bright")[3]]
+    # ax = sns.boxplot(x="edge", y="value", hue="method", medianprops={'color': 'lime', 'lw': 0}, data=congestion_dataframe, palette=palette_pastel_custom, showfliers = False, saturation=0.50) #, medianprops={'color': 'lime', 'lw': 2}
+    congestion_dataframe_mine = congestion_dataframe[congestion_dataframe['method'] == 'Proposed']
+    congestion_dataframe_baseline = congestion_dataframe[congestion_dataframe['method'] == 'SP']
+    ax=sns.lineplot(x="edge", y="value", estimator=np.median, data=congestion_dataframe, hue="method", palette=palette_bright_custom, errorbar=compute_95_confidence, legend="brief")
+    ax = sns.pointplot(x="edge", y="value", estimator=np.median, data=congestion_dataframe_mine, palette=palette_bright_blue, errorbar=compute_95_confidence, errwidth=1, capsize=.5)
+    ax = sns.pointplot(x="edge", y="value", estimator=np.median, data=congestion_dataframe_baseline, palette=palette_bright_red, errorbar=compute_95_confidence, errwidth=1, capsize=.5)
     ax.grid(True)
 else:
     ax.axhline(y=1, linewidth=1, color='red', label="Road limit")
@@ -215,8 +237,8 @@ else:
            label="Naive")
 
 plt.legend(prop={'size': 8})
-ax.set_xlabel(r'Edge')
-ax.set_ylabel(r'Congestion')
+ax.set_xlabel(r'edge')
+ax.set_ylabel(r'congestion')
 ax.set_ylim([-0.1, 1.5])
 plt.savefig('2_comparison_congestions.png')
 plt.savefig('2_comparison_congestions.pdf')
@@ -308,7 +330,7 @@ plt.savefig('3_comparison_social_welfare.pdf')
 plt.show(block=False)
 
 ### Plot #4 : expected value congestion error vs. # of agents
-fig, ax = plt.subplots(figsize=(4, 1.5), layout='constrained')
+fig, ax = plt.subplots(figsize=(4, 1.3), layout='constrained')
 # Preliminaries: generate realization of probabilistic controller FOR ALL NUMBER OF VEHICLES PER AGENT
 N_vehicles_per_agent = [ 10**1, 10**2, 10**3]
 N_tests_sample_size = np.size(N_vehicles_per_agent)
@@ -382,12 +404,13 @@ for index_n in range(N_tests_sample_size):
                                          columns=['n_vehicles', 'sample'])
                     cost_dataframe_comparison = cost_dataframe_comparison.append(s_row)
 
-ax = sns.boxplot(x='n_vehicles', y='sample', data=cost_dataframe_comparison, flierprops={"marker": "x"}, palette="muted")
-ax.set_xlabel("\# vehicles per population", fontsize=9)
-ax.set_ylabel(r'$\sum_{e, t} \frac{| \ell_e(\sigma^{{M}}_{e,t}) '
+ax = sns.boxplot(x='n_vehicles', y='sample', data=cost_dataframe_comparison, flierprops = dict(marker = 'x', markerfacecolor = '0.50', markersize = 2), palette="bright")
+ax.set_xlabel("V", fontsize=9)
+ax.set_ylabel(r'$\frac{| \ell_e(\sigma^{{M}}_{e,t}) '
               r'- \ell_e(\hat\sigma^{{M}}_{e,t})|}{\ell_e(\sigma^{{M}}_{e, t})}$', fontsize=9)
 ax.set_yscale('log')
 ax.set_ylim([-0.1, 5])
+ax.set_yticklabels([str(int(k*100))+r'\%' if k!=0 else r'$\pm$'+str(int(k*100))+r'\%' for k in ax.get_yticks()])
 ax.grid(True)
 fig.savefig('4_comparison_expected_congestion.png')
 fig.savefig('4_comparison_expected_congestion.pdf')
