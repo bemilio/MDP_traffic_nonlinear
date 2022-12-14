@@ -55,8 +55,8 @@ uncontrolled_traffic = {} # number of uncontrolled vehicles on each road ( = 1 i
 
 node_positions={} # only for drawing
 index=0
-capacity = 0.01
-limit = 100
+capacity = 0.1
+limit = 0.2
 travel_time = 0.1
 for node in Road_graph.nodes:
     node_positions.update({node: (index,index%2)})
@@ -84,3 +84,24 @@ f= open('test_graph.pkl', 'wb')
 pickle.dump(Road_graph, f)
 f.close
 print("Graph created")
+
+##### Build graph for multi-period problem (no capacity limits)
+
+travel_time_roads={} # Linearization factor of the travel time func.
+capacity_roads={} # Denominator in the travel time function
+limit_roads={} # Used as maximum allowed cars in a road for the shared constraints
+uncontrolled_traffic = {} # number of uncontrolled vehicles on each road ( = 1 if number of vehicles is equal to the number of vehicles in an "agent" (agents are vehicle populations))
+
+limit = 100
+for edge in Road_graph.edges:
+    if edge[0]==edge[1]:
+        limit_roads.update({edge: np.infty})
+    else:
+        limit_roads.update({edge: limit})
+nx.set_edge_attributes(Road_graph, values = limit_roads, name = 'limit_roads')
+
+
+f= open('test_graph_multiperiod.pkl', 'wb')
+pickle.dump(Road_graph, f)
+f.close
+print("Graph created for multiperiod problem")

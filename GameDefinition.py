@@ -10,12 +10,13 @@ class Game:
     # final_destinations: vector of size N containing the destination of each agent
     # initial_state: matrix of size n_nodes x N. contains the initial probability distribution of each agent over the nodes.
 
-    def __init__(self, T_horiz, N, road_graph, initial_state, final_destinations, add_terminal_cost=False,
-                add_destination_constraint=True, epsilon_probability=0.05, xi=4):
+    def __init__(self, T_horiz, N, road_graph, initial_state, final_destinations, receding_horizon=False,
+                 epsilon_probability=0.05, xi=4):
         self.N_agents = N
         self.epsilon_probability = epsilon_probability
-        self.add_terminal_cost = add_terminal_cost
-        self.add_destination_constraint = add_destination_constraint
+        self.receding_horizon = receding_horizon
+        self.add_terminal_cost = True if receding_horizon else False
+        self.add_destination_constraint = False if receding_horizon else True
         self.edge_time_to_index = {}
         self.node_time_to_index = {}
         self.road_graph = road_graph
@@ -43,7 +44,10 @@ class Game:
         self.A_ineq_shared = self.A_ineq_shared
         self.n_shared_ineq_constr = self.A_ineq_shared.size(1)
         cost_SP = self.compute_cost_shortest_paths(road_graph, N, self.node_time_to_index, self.n_opt_variables, final_destinations, T_horiz) # Matrix N x n_x. Contains cost of Short path for each agent from each node (the variables x associated to edges have cost_SP 0). Used for terminal cost.
-        weight_terminal_cost = self.compute_weight_terminal_cost(road_graph, N)
+        if self.add_terminal_cost:
+            weight_terminal_cost = self.compute_weight_terminal_cost(road_graph, N)
+        else:
+            weight_terminal_cost = 0.0
         # Define the (nonlinear) game mapping as a torch custom activation function
         self.F = self.GameMapping(self.n_opt_variables, road_graph, N, T_horiz, self.edge_time_to_index, xi, weight_terminal_cost, cost_SP)
         self.J = self.GameCost(self.n_opt_variables, road_graph, N, T_horiz, self.edge_time_to_index, xi, weight_terminal_cost, cost_SP)

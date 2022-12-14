@@ -28,9 +28,6 @@ def compute_quartiles(vec):
 def compute_95_confidence(vec):
     return np.percentile(vec, 5) , np.percentile(vec, 95)
 
-#f = open('/Users/ebenenati/surfdrive/TUDelft/Simulations/MDP_traffic_nonlinear/29_aug_22/saved_test_result.pkl', 'rb')
-# f = open(r"D:\cloud_files\owncloud_2\TUDelft\Simulations\MDP_traffic_nonlinear\29_aug_22\saved_test_result.pkl", 'rb')
-
 f = open('saved_test_result.pkl', 'rb')
 
 ## Data structure:
@@ -40,7 +37,6 @@ f = open('saved_test_result.pkl', 'rb')
 x, dual, residual, cost, road_graph, edge_time_to_index, node_time_to_index, T_horiz, initial_junctions, final_destinations, \
 congestion_baseline_stored, cost_baseline_stored = pickle.load(f)
 f.close()
-
 # f = open("saved_dataframes.pkl", 'rb')
 # cost_dataframe_comparison, costs_dataframe, congestion_dataframe = pickle.load(f)
 # f.close()
@@ -54,35 +50,36 @@ N_vertices = road_graph.number_of_nodes()
 
 torch.Tensor.ndim = property(lambda self: len(self.shape))  # Necessary to use matplotlib with tensors
 
+plot_exact_congestion = False # compare approximation to exact congestion value (instead of sampling). Beware: extremely computational expensive
+
 #Plot # 0: road graph
-# fig, ax = plt.subplots(T_horiz, 2, figsize=(5, 10 * 1.4), layout='constrained')
-# # fig, ax = plt.subplots(1, 1, figsize=(5, 2.6), layout='constrained')
-# pos = nx.get_node_attributes(road_graph, 'pos')
-#
-# # Toggle for multiple grrpahs
-# for t in range(T_horiz):
-# # for t in range(1):
-#     colors = []
-#     edgelist = []
-#     nodes = []
-#     for edge in road_graph.edges:
-#         if not edge[0] == edge[1]:
-#             color_edge = np.matrix([0])
-#             congestion = torch.sum(x[0, :, edge_time_to_index[(edge, t)]], 0) / N_agents
-#             color_edge = congestion
-#             colors.append(int(256 * color_edge))
-#             edgelist.append(edge)
-#     for node in road_graph.nodes:
-#         nodes.append(node)
-#     pos = nx.kamada_kawai_layout(road_graph)
-#     plt.sca(ax[t, 0])
-#     nx.draw_networkx_nodes(road_graph, pos=pos, nodelist=nodes, node_size=120, node_color='cyan')
-#     nx.draw_networkx_labels(road_graph, pos)
-#     # Toggle to color edges based on congestion
-#     nx.draw_networkx_edges(road_graph, pos=pos, edge_color=colors, edgelist=edgelist, edge_cmap=plt.cm.cool,
-#                            connectionstyle='arc3, rad = 0.1')
-    # nx.draw_networkx_edges(road_graph, pos=pos, edgelist=edgelist,
-    #                        connectionstyle='arc3, rad = 0.2')
+fig, ax = plt.subplots(T_horiz, 2, figsize=(5, 10 * 1.4), layout='constrained')
+# fig, ax = plt.subplots(1, 1, figsize=(5, 2.6), layout='constrained')
+pos = nx.get_node_attributes(road_graph, 'pos')
+# # Toggle for multiple graphs
+for t in range(T_horiz):
+# for t in range(1):
+    colors = []
+    edgelist = []
+    nodes = []
+    for edge in road_graph.edges:
+        if not edge[0] == edge[1]:
+            color_edge = np.matrix([0])
+            congestion = torch.sum(x[0, :, edge_time_to_index[(edge, t)]], 0) / N_agents
+            color_edge = congestion
+            colors.append(int(256 * color_edge))
+            edgelist.append(edge)
+    for node in road_graph.nodes:
+        nodes.append(node)
+    pos = nx.kamada_kawai_layout(road_graph)
+    plt.sca(ax[t, 0])
+    nx.draw_networkx_nodes(road_graph, pos=pos, nodelist=nodes, node_size=120, node_color='cyan')
+    nx.draw_networkx_labels(road_graph, pos)
+    # Toggle to color edges based on congestion
+    nx.draw_networkx_edges(road_graph, pos=pos, edge_color=colors, edgelist=edgelist, edge_cmap=plt.cm.cool,
+                           connectionstyle='arc3, rad = 0.1')
+    nx.draw_networkx_edges(road_graph, pos=pos, edgelist=edgelist,
+                           connectionstyle='arc3, rad = 0.2')
 # Draw baseline
 # for t in range(T_horiz):
 #     colors = []
@@ -109,7 +106,7 @@ torch.Tensor.ndim = property(lambda self: len(self.shape))  # Necessary to use m
 #
 # plt.show(block=False)
 #
-# plt.savefig('0_graph.png')
+plt.savefig('0_graph.png')
 
 
 
@@ -128,9 +125,8 @@ plt.xlabel('Iteration')
 plt.ylabel('Residual')
 plt.legend()
 plt.grid(True)
-plt.savefig('1_residual.png')
-plt.savefig('1_residual.pdf')
-
+plt.savefig('Figures/1_residual.png')
+plt.savefig('Figures/1_residual.pdf')
 plt.show()
 
 
@@ -240,46 +236,47 @@ plt.legend(prop={'size': 8})
 ax.set_xlabel(r'edge')
 ax.set_ylabel(r'congestion')
 ax.set_ylim([-0.1, 1.5])
-plt.savefig('2_comparison_congestions.png')
-plt.savefig('2_comparison_congestions.pdf')
+plt.savefig('Figures/2_comparison_congestions.png')
+plt.savefig('Figures/2_comparison_congestions.pdf')
 
 plt.show(block=False)
 
 ### Plot #3 : traversing time in tests vs. shortest path
 
 ## Computed cost function with exact expected congestion
-# Generate vectors of length N that sum to 4
-# print("Computing exact cost... this will take a while")
-# k_all = generate_permutations(4, N_agents)
-# expected_sigma_4th = torch.zeros(N_tests, N_opt_var) # For consistency, include also the variables associated to nodes (with no congestion)
-# cost_exact = torch.zeros(N_tests,N_agents)
-# for i_test in range(N_tests):
-#     for edge in road_graph.edges:
-#         for t in range(T_horiz):
-#             for i_perm in range(k_all.size(0)):
-#                 k = k_all[i_perm, :]
-#                 prod_p = 1
-#                 factor = multinomial_factor(4,k)
-#                 for index_agent in range(N_agents):
-#                     if k[index_agent]>0.001 : # if the corresponding factor is non-zero
-#                         if x[i_test, index_agent, edge_time_to_index[(edge, t)]].item() < 0.00001: # save on some computation if the current factor is 0
-#                             prod_p = 0
-#                             break
-#                         else:
-#                             prod_p = prod_p * x[i_test, index_agent, edge_time_to_index[(edge, t)]].item()
-#                 expected_sigma_4th[i_test, edge_time_to_index[(edge, t)]] = \
-#                     expected_sigma_4th[i_test, edge_time_to_index[(edge, t)]] + factor * prod_p
-#
-# for i_agent in range(N_agents):
-#     for i_test in range(N_tests):
-#         for edge in road_graph.edges:
-#             for t in range(T_horiz):
-#                 congestion = road_graph[edge[0]][edge[1]]['travel_time'] * ( 1 +  0.15 * expected_sigma_4th[i_test, edge_time_to_index[(edge, t)]] / \
-#                                                                              ((N_agents * road_graph[edge[0]][edge[1]]['capacity'])**4))
-#                 cost_partial = x[i_test, i_agent, edge_time_to_index[(edge, t)]] * congestion
-#                 cost_exact[i_test, i_agent] = cost_exact[i_test, i_agent] + cost_partial
-# print("Computed, plotting...")
-##
+
+if plot_exact_congestion:
+    # Generate vectors of length N that sum to 4
+    print("Computing exact cost... this will take a while")
+    k_all = generate_permutations(4, N_agents)
+    expected_sigma_4th = torch.zeros(N_tests, N_opt_var) # For consistency, include also the variables associated to nodes (with no congestion)
+    cost_exact = torch.zeros(N_tests,N_agents)
+    for i_test in range(N_tests):
+        for edge in road_graph.edges:
+            for t in range(T_horiz):
+                for i_perm in range(k_all.size(0)):
+                    k = k_all[i_perm, :]
+                    prod_p = 1
+                    factor = multinomial_factor(4,k)
+                    for index_agent in range(N_agents):
+                        if k[index_agent]>0.001 : # if the corresponding factor is non-zero
+                            if x[i_test, index_agent, edge_time_to_index[(edge, t)]].item() < 0.00001: # save on some computation if the current factor is 0
+                                prod_p = 0
+                                break
+                            else:
+                                prod_p = prod_p * x[i_test, index_agent, edge_time_to_index[(edge, t)]].item()
+                    expected_sigma_4th[i_test, edge_time_to_index[(edge, t)]] = \
+                        expected_sigma_4th[i_test, edge_time_to_index[(edge, t)]] + factor * prod_p
+
+    for i_agent in range(N_agents):
+        for i_test in range(N_tests):
+            for edge in road_graph.edges:
+                for t in range(T_horiz):
+                    congestion = road_graph[edge[0]][edge[1]]['travel_time'] * ( 1 +  0.15 * expected_sigma_4th[i_test, edge_time_to_index[(edge, t)]] / \
+                                                                                 ((N_agents * road_graph[edge[0]][edge[1]]['capacity'])**4))
+                    cost_partial = x[i_test, i_agent, edge_time_to_index[(edge, t)]] * congestion
+                    cost_exact[i_test, i_agent] = cost_exact[i_test, i_agent] + cost_partial
+    print("Computed, plotting...")
 
 fig, ax = plt.subplots(figsize=(5 * 1, 1.8 * 1), layout='constrained')
 
@@ -320,12 +317,10 @@ ax = sns.boxplot(x="value", data=costs_dataframe, palette="Set3")
 ax.set_ylim([-1, 1])
 ax.grid(True)
 
-# ax.axhline(y=0, linewidth=1, color='red')
-
 ax.set_xlabel(r'$\frac{\sum_i J_i(x_b) - J_i(x^{\star})}{\sum_i J_i(x_b)}$ ')
 
-plt.savefig('3_comparison_social_welfare.png')
-plt.savefig('3_comparison_social_welfare.pdf')
+plt.savefig('Figures/3_comparison_social_welfare.png')
+plt.savefig('Figures/3_comparison_social_welfare.pdf')
 
 plt.show(block=False)
 
@@ -412,8 +407,8 @@ ax.set_yscale('log')
 ax.set_ylim([-0.1, 5])
 ax.set_yticklabels([str(int(k*100))+r'\%' if k!=0 else r'$\pm$'+str(int(k*100))+r'\%' for k in ax.get_yticks()])
 ax.grid(True)
-fig.savefig('4_comparison_expected_congestion.png')
-fig.savefig('4_comparison_expected_congestion.pdf')
+fig.savefig('Figures/4_comparison_expected_congestion.png')
+fig.savefig('Figures/4_comparison_expected_congestion.pdf')
 
 plt.show(block="False")
 

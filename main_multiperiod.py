@@ -10,13 +10,13 @@ import sys
 
 from operator import itemgetter
 
-def set_stepsizes(N, road_graph, A_ineq_shared, algorithm='FRB'):
+def set_stepsizes(N, road_graph, A_ineq_shared, xi, algorithm='FRB'):
     theta = 0
     c = road_graph.edges[(0, 1)]['capacity']
     tau = road_graph.edges[(0, 1)]['travel_time']
-    a = road_graph.edges[(0, 1)]['uncontrolled_traffic']
-    k = 0.15 * 12 * tau / c
-    L = k* (N+1) + (1 + c/tau) * (tau*road_graph.number_of_nodes())
+    zeta = road_graph.edges[(0, 1)]['uncontrolled_traffic']
+    k = 0.15 * tau / (c**xi)
+    L = (2*k/N)* ((N+1) + (1 + zeta)**(xi-1) + (xi-1 * (1+zeta)**(xi-2)) )
     if algorithm == 'FRB':
         # L = 2*k/(4*N) * (N+a)**3 + k/N * (N+a)**2 * (N + (N/3) * (N+a) + \
         #                      np.sqrt( ((N/3)**2) * (N+a)**2  + (2*(N**2)/3) * (N+a) + N ) )
@@ -35,15 +35,16 @@ def set_stepsizes(N, road_graph, A_ineq_shared, algorithm='FRB'):
 if __name__ == '__main__':
     logging.basicConfig(filename='log.txt', filemode='w',level=logging.DEBUG)
     use_test_graph = True
-    N_random_tests = 1
+    N_random_tests = 100
     N_vehicles_per_agent = 1000
     print("Initializing road graph...")
     N_agents=8   # N agents
-    f = open('test_graph.pkl', 'rb')
+    f = open('test_graph_multiperiod.pkl', 'rb')
     Road_graph = pickle.load(f)
     f.close()
     T_horiz_to_test= [1,3,4,5,8]
     T_simulation=10
+    xi = 1. # exponent BPT congestion function
 
     n_juncs = len(Road_graph.nodes)
     print("Done")
@@ -61,18 +62,15 @@ if __name__ == '__main__':
     # containers for saved variables
     x_hsdm={}
     x_not_hsdm={}
-
     cost_hsdm={}
     cost_not_hsdm={}
-
     congestion_baseline={}
     cost_baseline={}
-
     initial_junctions_stored = {}
     final_destinations_stored = {}
-
     x_store = {}
     visited_nodes = {}
+    ######## BEGIN MAIN ITERATION#########
     for test in range(N_random_tests):
         # Change start-destination
         initial_junctions = np.random.randint(0, high=n_juncs, size=(N_agents))
@@ -95,8 +93,7 @@ if __name__ == '__main__':
             for t in range(T_simulation):
                 print("Initializing game for timestep " + str(t+1) + " out of " + str(T_simulation))
                 logging.info("Initializing game for timestep " + str(t+1) + " out of " + str(T_simulation))
-                game = Game(T_horiz, N_agents, Road_graph, initial_state, final_destinations, add_terminal_cost=True,
-                            add_destination_constraint=False, xi=1)
+                game = Game(T_horiz, N_agents, Road_graph, initial_state, final_destinations, receding_horizon=True, xi=xi)
                 if t==0:
                     print("The game has " + str(N_agents) + " agents; " + str(
                         game.n_opt_variables) + " opt. variables per agent; " \
@@ -113,7 +110,7 @@ if __name__ == '__main__':
                     visited_nodes.update({(test, T_horiz) : torch.zeros((N_agents, N_vehicles_per_agent, T_simulation + 1))})
                 print("Done")
                 visited_nodes[(test,T_horiz)][:, :, 0] = torch.from_numpy(initial_junctions).unsqueeze(1).repeat(1,N_vehicles_per_agent)
-                [alpha, beta, theta] = set_stepsizes(N_agents, Road_graph, game.A_ineq_shared, algorithm='FRB')
+                [alpha, beta, theta] = set_stepsizes(N_agents, Road_graph, game.A_ineq_shared, xi, algorithm='FRB')
                 alg = FRB_algorithm(game, beta=beta, alpha=alpha, theta=theta)
                 status = alg.check_feasibility()
                 ### Check feasibility
@@ -172,9 +169,9 @@ if __name__ == '__main__':
                     for i in range(N_agents):
                         initial_state_oneshot[initial_junctions[i], i] = 1
                     game = Game(T_simulation, N_agents, Road_graph, initial_state_oneshot, final_destinations,
-                                add_terminal_cost=False, add_destination_constraint=True, epsilon_probability=0.01,
+                                receding_horizon=False, epsilon_probability=0.01,
                                 xi=1)
-                    [alpha, beta, theta] = set_stepsizes(N_agents, Road_graph, game.A_ineq_shared, algorithm='FRB')
+                    [alpha, beta, theta] = set_stepsizes(N_agents, Road_graph, game.A_ineq_shared, xi, algorithm='FRB')
                     alg = FRB_algorithm(game, beta=beta, alpha=alpha, theta=theta)
                     for k in range(N_iter*10):
                         alg.run_once()

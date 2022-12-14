@@ -1,10 +1,6 @@
 import matplotlib as mpl
 import seaborn as sns
 import pandas as pd
-from cmath import inf
-from Utilities.generate_permutations import generate_permutations
-from Utilities.multinomial_factor import multinomial_factor
-
 
 mpl.interactive(True)
 import matplotlib.pyplot as plt
@@ -21,51 +17,44 @@ import torch
 from Utilities.plot_agent_route import plot_agent_route
 import os
 
+#### Toggle between loading saved file in this directory or all files in a specific directory
 
-## Load all files in a directory
-directory = r"D:\cloud_files\owncloud_2\TUDelft\Simulations\MDP_traffic_nonlinear\11_dec_22\Results"
-N_files = 0
-for filename in os.listdir(directory):
-    if filename.find('.pkl')>=0:
-        N_files=N_files+1 #count all files
-visited_nodes = {} #[test, T_horiz]
-initial_junctions_stored = {} #[test]
-final_destinations_stored = {} #[test]
-congestion_baseline_stored = {} #[test]
-N_tests=0
-for filename in os.listdir(directory):
-    if filename.find('.pkl')>=0:
-        f=open(directory+"\\"+filename, 'rb')
-        x_store_file, x_oneshot_store_file, visited_nodes_file, road_graph, edge_time_to_index_oneshot, node_time_to_index_oneshot, T_horiz_tested, T_simulation, \
-        initial_junctions_stored_file, final_destinations_stored_file, congestion_baseline_stored_file, cost_baseline_file, N_tests_file =  pickle.load(f)
-        if N_tests ==0:
-            x_oneshot_store= x_oneshot_store_file
-        else:
-            x_oneshot_store = torch.cat((x_oneshot_store, x_oneshot_store_file),dim=0)
-        for index in range(N_tests_file):
-            for T_hor in T_horiz_tested:
-                visited_nodes.update({(index + N_tests, T_hor): visited_nodes_file[(index,T_hor)]})
-            initial_junctions_stored.update({index + N_tests: initial_junctions_stored_file[index]})
-            final_destinations_stored.update({index + N_tests: final_destinations_stored_file[index]})
-            congestion_baseline_stored.update({index + N_tests: congestion_baseline_stored_file[index]})
-        N_tests = N_tests +N_tests_file
+load_files_from_current_dir = True
+if load_files_from_current_dir:
+    f = open('saved_test_result_multiperiod.pkl', 'rb')
+    x_store, x_oneshot_store, visited_nodes, road_graph, edge_time_to_index_oneshot, node_time_to_index_oneshot, T_horiz_tested, T_simulation, \
+        initial_junctions_stored, final_destinations_stored, congestion_baseline_stored, cost_baseline, N_tests = pickle.load(
+        f)
+    f.close()
+else:
+    # Load all files in a directory
+    directory = r"Insert/Directory!"
+    N_files = 0
+    for filename in os.listdir(directory):
+        if filename.find('.pkl')>=0:
+            N_files=N_files+1 #count all files
+    visited_nodes = {} #[test, T_horiz]
+    initial_junctions_stored = {} #[test]
+    final_destinations_stored = {} #[test]
+    congestion_baseline_stored = {} #[test]
+    N_tests=0
+    for filename in os.listdir(directory):
+        if filename.find('.pkl')>=0:
+            f=open(directory+"\\"+filename, 'rb')
+            x_store_file, x_oneshot_store_file, visited_nodes_file, road_graph, edge_time_to_index_oneshot, node_time_to_index_oneshot, T_horiz_tested, T_simulation, \
+            initial_junctions_stored_file, final_destinations_stored_file, congestion_baseline_stored_file, cost_baseline_file, N_tests_file =  pickle.load(f)
+            if N_tests ==0:
+                x_oneshot_store= x_oneshot_store_file
+            else:
+                x_oneshot_store = torch.cat((x_oneshot_store, x_oneshot_store_file),dim=0)
+            for index in range(N_tests_file):
+                for T_hor in T_horiz_tested:
+                    visited_nodes.update({(index + N_tests, T_hor): visited_nodes_file[(index,T_hor)]})
+                initial_junctions_stored.update({index + N_tests: initial_junctions_stored_file[index]})
+                final_destinations_stored.update({index + N_tests: final_destinations_stored_file[index]})
+                congestion_baseline_stored.update({index + N_tests: congestion_baseline_stored_file[index]})
+            N_tests = N_tests +N_tests_file
 print("Files loaded, plotting...")
-
-
-# f = open('/Users/ebenenati/surfdrive/TUDelft/Simulations/MDP_traffic_nonlinear/13_oct_22/saved_test_result_multiperiod.pkl', 'rb')
-## Data structure:
-## visited_nodes: dictionary with keys (index test, T_horiz) whose elements are tensors with dimension (N_agents, N_vehicles, T_horiz+1)
-# x_store, x_oneshot_store, visited_nodes, road_graph, edge_time_to_index_oneshot, node_time_to_index_oneshot, T_horiz_tested, T_simulation, \
-# initial_junctions_stored, final_destinations_stored, congestion_baseline_stored, cost_baseline, N_tests =  pickle.load(f)
-f.close()
-
-
-# f = open('saved_multiperiod_dataframes.pkl', 'rb')
-# distance_from_dest_dataframe, social_cost_dataframe = pickle.load(f)
-# f.close()
-
-# f = open('realization_oneshot.pkl', 'wb')
-# visited_nodes_oneshot, count_edge_taken_at_time_oneshot = pickle.load(f)
 
 N_agents = visited_nodes[(0, T_horiz_tested[0])].size(0)
 N_edges = road_graph.number_of_edges()
@@ -125,46 +114,6 @@ for T_horiz in T_horiz_tested:
             ratio_vehicles_reached_final_dest = ratio_vehicles_reached_final_dest + \
                 np.count_nonzero(visited_nodes[test, T_horiz][agent,:, -1] == final_destinations_stored[test][agent] ) / total_vehicles_and_tests
 print("The percentage of vehicles that reached the final destination is " + str(ratio_vehicles_reached_final_dest*100))
-# f=open("saved_oneshot_sol.pkl", 'wb')
-# pickle.dump(visited_nodes_oneshot, count_edge_taken_at_time_oneshot, f)
-# f.close()
-# f=open("saved_oneshot_sol.pkl", 'rb')
-# visited_nodes_oneshot = pickle.load(f)
-# f.close()
-# Plot how much time to reach destination
-# fig, ax = plt.subplots(figsize=(5 * 1, 3.6 * 1), layout='constrained')
-#
-#
-#
-# N_datapoints = N_tests * len(T_horiz_tested) * N_agents * N_vehicles
-# list_tests = np.zeros(N_datapoints)
-# list_T_horiz = np.zeros(N_datapoints)
-# list_agents = np.zeros(N_datapoints)
-# list_vehicles = np.zeros(N_datapoints)
-# list_value = np.zeros(N_datapoints)
-# index_datapoint =0
-# for test in range(N_tests):
-#     for agent in range(N_agents):
-#         SP_length = nx.shortest_path_length(road_graph, source=initial_junctions_stored[test][agent],
-#                                 target=final_destinations_stored[test][agent])
-#         for T_horiz in T_horiz_to_plot_1:
-#             for vehicle in range(N_vehicles):
-#                 is_destination_reached = ((visited_nodes[(test, T_horiz)][agent, vehicle, :] == final_destinations_stored[test][agent]).nonzero().numel() >0)
-#                 if is_destination_reached:
-#                     time_destination = \
-#                         (visited_nodes[(test, T_horiz)][agent, vehicle, :] == final_destinations_stored[test][agent]).nonzero()[0].item() - SP_length
-#                 else:
-#                     time_destination = 10
-#                 list_tests[index_datapoint] = test
-#                 list_T_horiz[index_datapoint] = T_horiz
-#                 list_agents[index_datapoint] = agent
-#                 list_vehicles[index_datapoint] = vehicle
-#                 list_value[index_datapoint] = time_destination
-#                 index_datapoint = index_datapoint +1
-# time_destination_dataframe = pd.DataFrame(list(zip(list_tests, list_T_horiz, list_agents, list_vehicles, list_value)), columns=['test', 'T horiz', 'agent','vehicle', 'value'])
-# ax = sns.boxplot(x = "T horiz", y="value", data=time_destination_dataframe, palette="hls", medianprops={'color': 'lime', 'lw': 2})
-# ax.grid(True)
-# plt.show(block=False)
 
 # Plot distance from  destination over time
 fig, ax = plt.subplots(figsize=(4 * 1, 2.1 * 1), layout='constrained')
@@ -256,8 +205,8 @@ ax.set_xlim([0, T_simulation - 1])
 ax.grid(True)
 ax.set_ylabel("\# nodes to destination (avg.)", fontsize = 9)
 ax.set_xlabel('timestep', fontsize = 9)
-fig.savefig('1_multiperiod_average_distance.png')
-fig.savefig('1_multiperiod_average_distance.pdf')
+fig.savefig('Figures/1_multiperiod_average_distance.png')
+fig.savefig('Figures/1_multiperiod_average_distance.pdf')
 
 plt.show(block=False)
 
@@ -338,8 +287,8 @@ ax.set_ylabel(r'$\frac{\sum_i J_i(x^{*})-J_i(x_{SP})}{\sum_i J_i(x_{SP})}$ ')
 ax.set_xlabel(r'horizon')
 ax.set_yticklabels([str(int(k*100))+r'\%' if k!=0 else r'$\pm$'+str(int(k*100))+r'\%' for k in ax.get_yticks()])
 ax.grid(True)
-fig.savefig('2_multiperiod_advantage.png')
-fig.savefig('2_multiperiod_advantage.pdf')
+fig.savefig('Figures/2_multiperiod_advantage.png')
+fig.savefig('Figures/2_multiperiod_advantage.pdf')
 plt.show(block=False)
 
 
