@@ -1,5 +1,5 @@
 # Probabilistic game-theoretic traffic routing
-This is the code associated to the paper "Probabilistic traffic routing" - E. Benenati and S. Grammatico, 2022 (under revision).
+This is the code associated to the paper "Probabilistic game-theoretic traffic routing" - E. Benenati and S. Grammatico, 2022 (under revision).
 
 This code solves for the Nash equilibrium routing solution for a fleet of vehicles. To run the code:
 
