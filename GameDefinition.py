@@ -14,6 +14,7 @@ class Game:
                  epsilon_probability=0.05, xi=4):
         self.N_agents = N
         self.epsilon_probability = epsilon_probability
+        self.receding_horizon = receding_horizon
         self.add_terminal_cost = True if receding_horizon else False
         self.add_destination_constraint = False if receding_horizon else True
         self.edge_time_to_index = {}

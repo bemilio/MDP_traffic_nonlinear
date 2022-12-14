@@ -39,7 +39,7 @@ if __name__ == '__main__':
     N_vehicles_per_agent = 1000
     print("Initializing road graph...")
     N_agents=8   # N agents
-    f = open('test_graph.pkl', 'rb')
+    f = open('test_graph_multiperiod.pkl', 'rb')
     Road_graph = pickle.load(f)
     f.close()
     T_horiz_to_test= [1,3,4,5,8]
@@ -93,7 +93,7 @@ if __name__ == '__main__':
             for t in range(T_simulation):
                 print("Initializing game for timestep " + str(t+1) + " out of " + str(T_simulation))
                 logging.info("Initializing game for timestep " + str(t+1) + " out of " + str(T_simulation))
-                game = Game(T_horiz, N_agents, Road_graph, initial_state, final_destinations, receding_horizon=False, xi=xi)
+                game = Game(T_horiz, N_agents, Road_graph, initial_state, final_destinations, receding_horizon=True, xi=xi)
                 if t==0:
                     print("The game has " + str(N_agents) + " agents; " + str(
                         game.n_opt_variables) + " opt. variables per agent; " \
