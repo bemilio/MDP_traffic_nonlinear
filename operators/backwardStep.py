@@ -26,7 +26,7 @@ class BackwardStep(torch.nn.Module):
                     n_soft_constr = index_soft_constraints.size(1)
                     self.n_soft_constraints = n_soft_constr
                     self.Q.append(
-                        sparse.csr_matrix(scipy.linalg.block_diag(Q[n, :, :].numpy(), np.zeros(n_soft_constr))))
+                        sparse.csc_matrix(scipy.linalg.block_diag(Q[n, :, :].numpy(), np.zeros(n_soft_constr))))
                     # With soft const in epigraphic form,
                     # A_new = [ A, [0, -I]^T;
                     #           0, -I ]
@@ -35,7 +35,7 @@ class BackwardStep(torch.nn.Module):
                                              np.hstack(
                                                  (np.zeros((n_soft_constr, A_ineq.size(2))), -np.eye(n_soft_constr)))))
                     A_eq_soft = np.hstack((A_eq[n, :, :].numpy(), np.zeros((A_eq.size(1), n_soft_constr))))
-                    self.A_ineq.append(sparse.csr_matrix(np.vstack((A_ineq_soft, A_eq_soft))))
+                    self.A_ineq.append(sparse.csc_matrix(np.vstack((A_ineq_soft, A_eq_soft))))
                     self.lower.append(
                         np.vstack((-np.inf * np.ones((b_ineq.shape[1] + n_soft_constr, 1)), b_eq[n, :].numpy())))
                     self.upper.append(
@@ -44,8 +44,8 @@ class BackwardStep(torch.nn.Module):
                 else:
                     n_soft_constr = 0
                     self.n_soft_constraints = n_soft_constr
-                    self.Q.append(sparse.csr_matrix(Q[n, :, :].numpy()))
-                    self.A_ineq.append(sparse.csr_matrix(np.vstack((A_ineq[n, :, :].numpy(), A_eq[n, :, :].numpy()))))
+                    self.Q.append(sparse.csc_matrix(Q[n, :, :].numpy()))
+                    self.A_ineq.append(sparse.csc_matrix(np.vstack((A_ineq[n, :, :].numpy(), A_eq[n, :, :].numpy()))))
                     self.lower.append(np.vstack((-np.inf * np.ones((b_ineq.shape[1], 1)), b_eq[n, :].numpy())))
                     self.upper.append(np.vstack((b_ineq[n, :].numpy(), b_eq[n, :].numpy())))
             pad = torch.nn.ConstantPad2d((0, 0, 0, self.n_soft_constraints), soft_const_penalty)

@@ -10,8 +10,8 @@ class Game:
     # final_destinations: vector of size N containing the destination of each agent
     # initial_state: matrix of size n_nodes x N. contains the initial probability distribution of each agent over the nodes.
 
-    def __init__(self, T_horiz, N, road_graph, initial_state, final_destinations, receding_horizon=False,
-                 epsilon_probability=0.05, xi=4):
+    def __init__(self, T_horiz, N, road_graph, communication_graph, initial_state, final_destinations, receding_horizon=False,
+                 epsilon_probability=0.05, xi=4, wardrop=False, penalized_agents=(0,)):
         self.N_agents = N
         self.epsilon_probability = epsilon_probability
         self.receding_horizon = receding_horizon
@@ -23,6 +23,7 @@ class Game:
         self.final_destinations = final_destinations
         self.T_horiz = T_horiz
         self.xi = xi
+        self.penalized_agents=penalized_agents
         index_x = 0
         for edge in road_graph.edges:
             for t in range (T_horiz):
@@ -49,8 +50,16 @@ class Game:
         else:
             weight_terminal_cost = 0.0
         # Define the (nonlinear) game mapping as a torch custom activation function
-        self.F = self.GameMapping(self.n_opt_variables, road_graph, N, T_horiz, self.edge_time_to_index, xi, weight_terminal_cost, cost_SP)
-        self.J = self.GameCost(self.n_opt_variables, road_graph, N, T_horiz, self.edge_time_to_index, xi, weight_terminal_cost, cost_SP)
+        self.F = self.GameMapping(self.n_opt_variables, road_graph, N, T_horiz, \
+                                  self.edge_time_to_index, xi, weight_terminal_cost, cost_SP, wardrop)
+        self.J = self.GameCost(self.n_opt_variables, road_graph, N, T_horiz, \
+                               self.edge_time_to_index, xi, weight_terminal_cost, cost_SP)
+        self.K = self.Consensus(communication_graph, self.n_shared_ineq_constr)
+        # Define the selection function gradient (can be zero)
+        self.nabla_phi = self.SelFunGrad(self.road_graph, N, T_horiz, self.edge_time_to_index, \
+                                         self.n_opt_variables, self.penalized_agents)
+        self.phi = self.SelFun(self.road_graph, N, T_horiz, self.edge_time_to_index, \
+                               self.n_opt_variables, self.penalized_agents)
 
     class GameCost(torch.nn.Module):
         def __init__(self, n_opt_variables, road_graph, N, T_horiz, edge_time_to_index, xi, weight_terminal_cost, cost_SP):
@@ -78,7 +87,7 @@ class Game:
             return torch.add(torch.matmul(x.transpose(1,2), ell), term_cost)
 
     class GameMapping(torch.nn.Module):
-        def __init__(self, n_opt_variables, road_graph, N, T_horiz, edge_time_to_index, xi, weight_terminal_cost, cost_SP):
+        def __init__(self, n_opt_variables, road_graph, N, T_horiz, edge_time_to_index, xi, weight_terminal_cost, cost_SP, wardrop):
             super().__init__()
             self.tau = torch.zeros(n_opt_variables, 1) # Stack all free-flow traversing time. To vectorize, vertices are treated the same as edges, but with cost 0.
             self.capacity = torch.ones(n_opt_variables, 1) # Stack of road (normalized) capacities. To vectorize, vertices are treated the same as edges. We initialize to 1 to avoid dividing by 0.
@@ -94,6 +103,8 @@ class Game:
             self.N = N
             self.weight_terminal_cost = weight_terminal_cost
             self.cost_SP = cost_SP
+            self.is_wardrop = wardrop
+
 
         def forward(self, x):
             sigma = torch.add(torch.sum(x, 0), self.uncontrolled_traffic) / self.N
@@ -103,7 +114,18 @@ class Game:
             nabla_ell = torch.mul( torch.mul(self.k, sigma_ximinone_th) , self.xi) # \nabla l(sigma)
             # \nabla_{x_i} J_i = ell(sigma) + (x_i/N) \nabla_{sigma} ell(sigma)
             term_nabla = self.weight_terminal_cost * self.cost_SP
-            return torch.add(torch.add(ell, torch.mul(x/self.N, nabla_ell)), term_nabla)
+            if self.is_wardrop:
+                return torch.add(ell, term_nabla)
+            else:
+                return torch.add(torch.add(ell, torch.mul(x/self.N, nabla_ell)), term_nabla)
+
+        def get_strMon_Lip_constants(self):
+            # TODO: find Lipschitz for Wardrop eq.
+            # Return strong monotonicity and Lipschitz constant. See traffic paper, Prop. 2
+            L = torch.max( torch.mul( (2*self.k/self.N),
+                                  torch.add(torch.pow(1+self.uncontrolled_traffic,self.xi), \
+                                            self.xi*torch.pow(1+self.uncontrolled_traffic,self.xi-1) ) ) )
+            return 0, L
 
     def define_local_constraints(self, T_horiz, N, road_graph, initial_state, final_destinations):
         # Evolution constraint
@@ -243,4 +265,68 @@ class Game:
                 cost_edge = self.road_graph[edge_taken[0]][edge_taken[1]]['travel_time'] * ( 1 + 0.15 * ( (sigma[(edge_taken,t)] + uncontrolled_traffic_edge)/capacity_edge)**self.xi )
                 cost_incurred[i_agent] = cost_incurred[i_agent] + cost_edge
         return sigma, cost_incurred
+
+    class Consensus(torch.nn.Module):
+        def __init__(self, communication_graph, N_dual_variables):
+            super().__init__()
+            super().__init__()
+            # Convert Laplacian matrix to sparse tensor
+            L = nx.laplacian_matrix(communication_graph).tocoo()
+            values = L.data
+            rows = L.row
+            cols = L.col
+            indices = np.vstack((rows, cols))
+            L = L.tocsr()
+            i = torch.LongTensor(indices)
+            v = torch.FloatTensor(values)
+            L_torch = torch.zeros(L.shape[0], L.shape[1], N_dual_variables, N_dual_variables)
+            for i in rows:
+                for j in cols:
+                    L_torch[i, j, :, :] = L[i, j] * torch.eye(N_dual_variables)
+            # TODO: understand why sparse does not work
+            # self.L = L_torch.to_sparse_coo()
+            self.L = L_torch
+
+        def forward(self, dual):
+            return torch.sum(torch.matmul(self.L, dual), dim=1)  # This applies the laplacian matrix to each of the dual variables
+
+    class SelFunGrad(torch.nn.Module):
+        def __init__(self, road_graph, N_agents, T_horiz, edge_time_to_index, n_opt_variables, penalized_agents):
+            super().__init__()
+            self.Q = torch.zeros(N_agents, n_opt_variables, n_opt_variables) # "block-diagonal" matrix, every i-th agent is associated a block
+            self.c = torch.zeros(N_agents, n_opt_variables, 1)
+            for i in range(N_agents):
+                for t in range(T_horiz):
+                    for edge in road_graph.edges:
+                        if road_graph[edge[0]][edge[1]]['is_penalized_edge']>0 and i in penalized_agents:
+                            self.Q[i, edge_time_to_index[(edge, t)], edge_time_to_index[(edge, t)]] = 1
+
+        def forward(self, x):
+            return torch.bmm(self.Q, x) + self.c
+
+    class SelFun(torch.nn.Module):
+        def __init__(self, road_graph, N_agents, T_horiz, edge_time_to_index, n_opt_variables, penalized_agents):
+            super().__init__()
+            self.Q = torch.zeros(N_agents, n_opt_variables, n_opt_variables) # "block-diagonal" matrix, every i-th agent is associated a block
+            self.c = torch.zeros(N_agents, n_opt_variables, 1)
+            for i in range(N_agents):
+                for t in range(T_horiz):
+                    for edge in road_graph.edges:
+                        if road_graph[edge[0]][edge[1]]['is_penalized_edge'] and i in penalized_agents:
+                            self.Q[i, edge_time_to_index[(edge, t)], edge_time_to_index[(edge, t)]] = 1
+
+        def forward(self, x):
+            # Cost is .5*x'Qx + c'x,  where Q is a block-diagonal matrix stored in a tensor N*N*n*n. The i,j-th block is in Q[i,j,:,:].
+            return torch.sum(torch.bmm(x.transpose(1,2), .5*torch.bmm(self.Q, x) + self.c))
+
+        def get_strMon_Lip_constants(self):
+            # Return strong monotonicity and Lipschitz constant
+            # Convert Q from block-diagonal matrix to standard matrix #TODO: turn block-diagonal matrix into separate class
+            N = self.Q.size(0)
+            n_x = self.Q.size(1)
+            Q_mat = torch.zeros(N*n_x, N*n_x)
+            for i in range(N):
+                Q_mat[i*n_x:(i+1)*n_x, i*n_x:(j+1)*n_x] = self.Q[i,:,:]
+            U,S,V = torch.linalg.svd(Q_mat)
+            return torch.min(S).item(), torch.max(S).item()
 

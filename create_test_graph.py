@@ -48,15 +48,18 @@ else:
     # Road_graph.add_edge(11,8)
     Road_graph.add_edge(4,11)
 
+penalized_edges = ( (2,5), (5,2), (7,6), (8,1), (1,8), (9,5), (9,4), (4,9), (2,0), (2,3), (6,7), (7,6) )
+
 travel_time_roads={} # Linearization factor of the travel time func.
 capacity_roads={} # Denominator in the travel time function
 limit_roads={} # Used as maximum allowed cars in a road for the shared constraints
 uncontrolled_traffic = {} # number of uncontrolled vehicles on each road ( = 1 if number of vehicles is equal to the number of vehicles in an "agent" (agents are vehicle populations))
+penalized_edges_indicator = {}
 
 node_positions={} # only for drawing
 index=0
-capacity = 0.1
-limit = 0.2
+capacity = 0.3
+limit = 0.5
 travel_time = 0.1
 for node in Road_graph.nodes:
     node_positions.update({node: (index,index%2)})
@@ -67,17 +70,23 @@ for edge in Road_graph.edges:
         capacity_roads.update({edge: np.infty})
         limit_roads.update({edge: np.infty})
         uncontrolled_traffic.update({edge: 0})
+        penalized_edges_indicator.update({edge: 0})
     else:
         travel_time_roads.update({edge: travel_time})
         capacity_roads.update({edge: capacity})
         limit_roads.update({edge: limit})
         uncontrolled_traffic.update({edge: 1}) # 1 is the minimum necessary for monotonicity
+        if (edge[0], edge[1]) in penalized_edges:
+            penalized_edges_indicator.update({edge: 1})
+        else:
+            penalized_edges_indicator.update({edge: 0})
 nx.set_node_attributes(Road_graph, values = node_positions, name = 'pos')
 
 nx.set_edge_attributes(Road_graph, values = travel_time_roads, name = 'travel_time')
 nx.set_edge_attributes(Road_graph, values = capacity_roads, name = 'capacity')
 nx.set_edge_attributes(Road_graph, values = limit_roads, name = 'limit_roads')
 nx.set_edge_attributes(Road_graph, values = uncontrolled_traffic, name = 'uncontrolled_traffic')
+nx.set_edge_attributes(Road_graph, values = penalized_edges_indicator, name = 'is_penalized_edge')
 
 
 f= open('test_graph.pkl', 'wb')  
