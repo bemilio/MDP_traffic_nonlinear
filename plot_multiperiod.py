@@ -21,14 +21,14 @@ import os
 
 load_files_from_current_dir = True
 if load_files_from_current_dir:
-    f = open('saved_test_result_multiperiod.pkl', 'rb')
+    f = open('saved_test_result_multiperiod_0.pkl', 'rb')
     x_store, x_oneshot_store, visited_nodes, road_graph, edge_time_to_index_oneshot, node_time_to_index_oneshot, T_horiz_tested, T_simulation, \
-        initial_junctions_stored, final_destinations_stored, congestion_baseline_stored, cost_baseline, N_tests = pickle.load(
-        f)
+        initial_junctions_stored, final_destinations_stored, congestion_baseline_stored, cost_baseline, N_tests,\
+        T_road_blockage, edge_blockage, blockage_time_factor, blockage_capacity_factor = pickle.load(f)
     f.close()
 else:
     # Load all files in a directory
-    directory = r"Insert/Directory!"
+    directory = r"C:\Users\ebenenati\surfdrive - Emilio Benenati@surfdrive.surf.nl2\TUDelft\Simulations\MDP_traffic_nonlinear\11_dec_22\Results"
     N_files = 0
     for filename in os.listdir(directory):
         if filename.find('.pkl')>=0:
@@ -60,8 +60,10 @@ N_agents = visited_nodes[(0, T_horiz_tested[0])].size(0)
 N_edges = road_graph.number_of_edges()
 N_vertices = road_graph.number_of_nodes()
 N_vehicles = visited_nodes[(0, T_horiz_tested[0])].size(1)
-T_horiz_to_plot_1 = [1,8]
-T_horiz_to_plot_2 = [1,3,5,8]
+# T_horiz_to_plot_1 = [1,8]
+# T_horiz_to_plot_2 = [1,3,5,8]
+T_horiz_to_plot_1 = [1,3]
+T_horiz_to_plot_2 = [1,3]
 
 for T in T_horiz_to_plot_1:
     if T not in T_horiz_tested:
@@ -240,14 +242,18 @@ for T_horiz in T_horiz_to_plot_2:
             for t in range(T_simulation):
                 uncontrolled_traffic_edge = road_graph[edge[0]][edge[1]]['uncontrolled_traffic']
                 sigma = (count_edge_taken_at_time[(T_horiz, test, edge, t)] / N_vehicles) / N_agents
-                cost_edge = road_graph[edge[0]][edge[1]]['travel_time'] * (
-                            1 + 0.15 * ((sigma + (uncontrolled_traffic_edge / N_agents)) / (road_graph[edge[0]][edge[1]]['capacity'])))
+                if t>=T_road_blockage:
+                    travel_time = blockage_time_factor * road_graph[edge[0]][edge[1]]['travel_time']
+                    capacity = blockage_capacity_factor * road_graph[edge[0]][edge[1]]['capacity']
+                else:
+                    travel_time = road_graph[edge[0]][edge[1]]['travel_time']
+                    capacity = road_graph[edge[0]][edge[1]]['capacity']
+                cost_edge = travel_time * (1 + 0.15 * ((sigma + (uncontrolled_traffic_edge / N_agents)) / capacity))
                 if (edge, t) in congestion_baseline_stored[test].keys():
                     sigma_baseline = congestion_baseline_stored[test][(edge, t)]
                 else:
                     sigma_baseline = 0
-                cost_edge_baseline = road_graph[edge[0]][edge[1]]['travel_time'] * (
-                        1 + 0.15 * ((sigma_baseline + (uncontrolled_traffic_edge / N_agents)) / (road_graph[edge[0]][edge[1]]['capacity'])))
+                cost_edge_baseline = travel_time * (1 + 0.15 * ((sigma_baseline + (uncontrolled_traffic_edge / N_agents)) / capacity))
                 cost_partial = sigma * cost_edge
                 cost_partial_baseline = sigma_baseline * cost_edge_baseline
                 social_cost = social_cost + cost_partial
@@ -255,24 +261,26 @@ for T_horiz in T_horiz_to_plot_2:
         list_tests[index_datapoint] = test
         list_T_horiz[index_datapoint] = int(T_horiz)
         list_value[index_datapoint] = (social_cost - social_cost_baseline ) / social_cost_baseline
-        index_datapoint = index_datapoint +1
+        index_datapoint = index_datapoint + 1
 # Compute one shot social cost
 for test in range(N_tests):
     social_cost_oneshot = 0
     social_cost_baseline = 0
     for edge in road_graph.edges:
         for t in range(T_simulation):
+            if t >= T_road_blockage:
+                travel_time = blockage_time_factor * road_graph[edge[0]][edge[1]]['travel_time']
+                capacity = blockage_capacity_factor * road_graph[edge[0]][edge[1]]['capacity']
+            else:
+                travel_time = road_graph[edge[0]][edge[1]]['travel_time']
+                capacity = road_graph[edge[0]][edge[1]]['capacity']
             sigma_oneshot = (count_edge_taken_at_time_oneshot[(test, edge, t)] / N_vehicles) / N_agents
-            cost_edge_oneshot = road_graph[edge[0]][edge[1]]['travel_time'] * (
-                    1 + 0.15 * ((sigma_oneshot + (uncontrolled_traffic_edge / N_agents)) / (
-            road_graph[edge[0]][edge[1]]['capacity'])))
+            cost_edge_oneshot = travel_time * (1 + 0.15 * ((sigma_oneshot + (uncontrolled_traffic_edge / N_agents))/capacity))
             if (edge, t) in congestion_baseline_stored[test].keys():
                 sigma_baseline = congestion_baseline_stored[test][(edge, t)]
             else:
                 sigma_baseline = 0
-            cost_edge_baseline = road_graph[edge[0]][edge[1]]['travel_time'] * (
-                    1 + 0.15 * ((sigma_baseline + (uncontrolled_traffic_edge / N_agents)) / (
-            road_graph[edge[0]][edge[1]]['capacity'])))
+            cost_edge_baseline = travel_time * (1 + 0.15 * ((sigma_baseline + (uncontrolled_traffic_edge / N_agents)) / capacity))
             cost_partial_oneshot = sigma_oneshot * cost_edge_oneshot
             cost_partial_baseline = sigma_baseline * cost_edge_baseline
             social_cost_oneshot = social_cost_oneshot + cost_partial_oneshot

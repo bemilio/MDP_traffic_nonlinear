@@ -35,17 +35,25 @@ def set_stepsizes(N, road_graph, A_ineq_shared, xi, algorithm='FRB'):
 if __name__ == '__main__':
     logging.basicConfig(filename='log.txt', filemode='w',level=logging.DEBUG)
     use_test_graph = True
-    N_random_tests = 100
+    N_random_tests = 2
     N_vehicles_per_agent = 1000
+    # T_horiz_to_test = [1, 3, 5, 8]
+    T_horiz_to_test = [1, 3]
+    T_simulation = 3
+    # T_simulation = 10
+    T_road_blockage = 2
+    edge_blockage = (5,6)
+    blockage_time_factor = 2
+    blockage_capacity_factor = .3
     print("Initializing road graph...")
     N_agents=8   # N agents
     f = open('test_graph_multiperiod.pkl', 'rb')
     Road_graph = pickle.load(f)
+    Road_graph_blocked = Road_graph.copy()
+    nx.set_edge_attributes(Road_graph_blocked, values=blockage_time_factor * Road_graph[edge_blockage[0]][edge_blockage[1]]['travel_time'], name='travel_time')
+    nx.set_edge_attributes(Road_graph_blocked, values=blockage_capacity_factor * Road_graph[edge_blockage[0]][edge_blockage[1]]['capacity'], name='capacity')
     f.close()
-    T_horiz_to_test= [1,3,4,5,8]
-    T_simulation=10
     xi = 1. # exponent BPT congestion function
-
     n_juncs = len(Road_graph.nodes)
     print("Done")
     print("Running simulation with ", n_juncs," nodes and", N_agents," agents")
@@ -93,7 +101,10 @@ if __name__ == '__main__':
             for t in range(T_simulation):
                 print("Initializing game for timestep " + str(t+1) + " out of " + str(T_simulation))
                 logging.info("Initializing game for timestep " + str(t+1) + " out of " + str(T_simulation))
-                game = Game(T_horiz, N_agents, Road_graph, initial_state, final_destinations, receding_horizon=True, xi=xi)
+                if t>=T_road_blockage:
+                    game = Game(T_horiz, N_agents, Road_graph_blocked, initial_state, final_destinations, receding_horizon=True, xi=xi)
+                else:
+                    game = Game(T_horiz, N_agents, Road_graph, initial_state, final_destinations, receding_horizon=True, xi=xi)
                 if t==0:
                     print("The game has " + str(N_agents) + " agents; " + str(
                         game.n_opt_variables) + " opt. variables per agent; " \
@@ -159,7 +170,9 @@ if __name__ == '__main__':
                 # Compute baselines
                 if t==0 and T_horiz==T_horiz_to_test[0]:
                     # First baseline: shortest path
-                    congestion_baseline_instance, cost_baseline_instance = game.compute_baseline(initial_junctions, final_destinations) # Compute cost of naive shortest path
+                    congestion_baseline_instance, cost_baseline_instance = game.compute_baseline(initial_junctions, final_destinations,
+                         T_road_blockage=T_road_blockage, edge_blockage=edge_blockage,
+                         blockage_time_factor=blockage_time_factor, blockage_capacity_factor=blockage_capacity_factor) # Compute cost of naive shortest path
                     congestion_baseline.update({test : congestion_baseline_instance})
                     cost_baseline.update({test : cost_baseline_instance.flatten(0)})
                     # Second baseline: non-receding horizon solution (one shot solution)
@@ -192,7 +205,8 @@ if __name__ == '__main__':
     filename = "saved_test_result_multiperiod_" + str(job_id) + ".pkl"
     f = open(filename, 'wb')
     pickle.dump([ x_store, x_oneshot_store, visited_nodes, Road_graph, edge_time_to_index_oneshot, node_time_to_index_oneshot, T_horiz_to_test, T_simulation, \
-                 initial_junctions_stored, final_destinations_stored, congestion_baseline, cost_baseline, N_random_tests], f)
+                 initial_junctions_stored, final_destinations_stored, congestion_baseline, cost_baseline, N_random_tests,
+                 T_road_blockage, edge_blockage, blockage_time_factor, blockage_capacity_factor], f)
     f.close()
     print("Saved")
     logging.info("Saved, job done")
