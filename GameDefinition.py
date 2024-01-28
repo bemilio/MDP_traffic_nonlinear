@@ -222,7 +222,7 @@ class Game:
         weight = 1.1*(1 + (k*(N_agents+1))/(2*N_agents*tau))
         return weight
 
-    def compute_baseline(self, initial_junctions, final_destinations, T_road_blockage=0, edge_blockage=(0,0),
+    def compute_baseline(self, initial_junctions, final_destinations, T_road_blockage=0, edge_blockage_list=[(0,0)],
                          blockage_time_factor=1, blockage_capacity_factor=1 ):
         # compute congestion and cost function incurred by shortest paths
         shortest_paths = self.compute_shortest_paths(initial_junctions, final_destinations)
@@ -241,7 +241,7 @@ class Game:
                 edge_taken = (shortest_paths[i_agent][t], shortest_paths[i_agent][t+1])
                 capacity_edge = self.road_graph[edge_taken[0]][edge_taken[1]]['capacity']
                 travel_time_edge = self.road_graph[edge_taken[0]][edge_taken[1]]['travel_time']
-                if t>=T_road_blockage and edge_taken==edge_blockage:
+                if t>=T_road_blockage and edge_taken in edge_blockage_list:
                     travel_time_edge = travel_time_edge * blockage_time_factor
                     capacity_edge = capacity_edge * blockage_capacity_factor
                 uncontrolled_traffic_edge = self.road_graph[edge_taken[0]][edge_taken[1]]['uncontrolled_traffic']

@@ -27,8 +27,7 @@ def compute_quartiles(vec):
 
 def compute_95_confidence(vec):
     return np.percentile(vec, 5) , np.percentile(vec, 95)
-
-f = open('saved_test_result.pkl', 'rb')
+f = open(r"C:\Users\ebenenati\surfdrive - Emilio Benenati@surfdrive.surf.nl2\TUDelft\Simulations\MDP_traffic_nonlinear\29_aug_22\saved_test_result.pkl", 'rb')
 
 ## Data structure:
 ## x: Tensor with dimension (n. random tests, N agents, n variables)
@@ -162,8 +161,8 @@ for test in range(N_tests):
                         conditioned_prob[end_node] =  max(x[test, i_agent, edge_time_to_index[(( starting_node, end_node), t)] ], 0) / prob_starting_node
                     else:
                         conditioned_prob[end_node] = 0
-                if sum(conditioned_prob) -1 >=0.0001:
-                    print("Warning: conditioned prob. does not sum to 1, but to " + sum(conditioned_prob))
+                # if sum(conditioned_prob) -1 >=0.0001:
+                    # print("Warning: conditioned prob. does not sum to 1, but to " + sum(conditioned_prob))
                 conditioned_prob = conditioned_prob/sum(conditioned_prob) #necessary just for numerical tolerancies
                 next_visited_node = np.random.choice(range(road_graph.number_of_nodes()), p=conditioned_prob)
                 visited_nodes[test, i_agent, vehicle, t + 1] = next_visited_node

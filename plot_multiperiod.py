@@ -16,19 +16,20 @@ import pickle
 import torch
 from Utilities.plot_agent_route import plot_agent_route
 import os
-
+T_road_blockage = 0
+blockage_time_factor = 1
+blockage_capacity_factor = 1
 #### Toggle between loading saved file in this directory or all files in a specific directory
-
-load_files_from_current_dir = True
+load_files_from_current_dir = False
 if load_files_from_current_dir:
     f = open('saved_test_result_multiperiod_0.pkl', 'rb')
     x_store, x_oneshot_store, visited_nodes, road_graph, edge_time_to_index_oneshot, node_time_to_index_oneshot, T_horiz_tested, T_simulation, \
         initial_junctions_stored, final_destinations_stored, congestion_baseline_stored, cost_baseline, N_tests,\
-        T_road_blockage, edge_blockage, blockage_time_factor, blockage_capacity_factor = pickle.load(f)
+        T_road_blockage, edge_blockage_list, blockage_time_factor, blockage_capacity_factor = pickle.load(f)
     f.close()
 else:
     # Load all files in a directory
-    directory = r"C:\Users\ebenenati\surfdrive - Emilio Benenati@surfdrive.surf.nl2\TUDelft\Simulations\MDP_traffic_nonlinear\11_dec_22\Results"
+    directory = r"C:\Users\ebenenati\surfdrive - Emilio Benenati@surfdrive.surf.nl2\TUDelft\Simulations\MDP_traffic_nonlinear\28_gen_24\Results"
     N_files = 0
     for filename in os.listdir(directory):
         if filename.find('.pkl')>=0:
@@ -42,7 +43,8 @@ else:
         if filename.find('.pkl')>=0:
             f=open(directory+"\\"+filename, 'rb')
             x_store_file, x_oneshot_store_file, visited_nodes_file, road_graph, edge_time_to_index_oneshot, node_time_to_index_oneshot, T_horiz_tested, T_simulation, \
-            initial_junctions_stored_file, final_destinations_stored_file, congestion_baseline_stored_file, cost_baseline_file, N_tests_file =  pickle.load(f)
+            initial_junctions_stored_file, final_destinations_stored_file, congestion_baseline_stored_file, cost_baseline_file, N_tests_file,\
+                T_road_blockage, edge_blockage_list, blockage_time_factor, blockage_capacity_factor =  pickle.load(f)
             if N_tests ==0:
                 x_oneshot_store= x_oneshot_store_file
             else:
@@ -62,8 +64,8 @@ N_vertices = road_graph.number_of_nodes()
 N_vehicles = visited_nodes[(0, T_horiz_tested[0])].size(1)
 # T_horiz_to_plot_1 = [1,8]
 # T_horiz_to_plot_2 = [1,3,5,8]
-T_horiz_to_plot_1 = [1,3]
-T_horiz_to_plot_2 = [1,3]
+T_horiz_to_plot_1 = [8]
+T_horiz_to_plot_2 = [8]
 
 for T in T_horiz_to_plot_1:
     if T not in T_horiz_tested:
@@ -242,7 +244,7 @@ for T_horiz in T_horiz_to_plot_2:
             for t in range(T_simulation):
                 uncontrolled_traffic_edge = road_graph[edge[0]][edge[1]]['uncontrolled_traffic']
                 sigma = (count_edge_taken_at_time[(T_horiz, test, edge, t)] / N_vehicles) / N_agents
-                if t>=T_road_blockage:
+                if t>=T_road_blockage and edge in edge_blockage_list:
                     travel_time = blockage_time_factor * road_graph[edge[0]][edge[1]]['travel_time']
                     capacity = blockage_capacity_factor * road_graph[edge[0]][edge[1]]['capacity']
                 else:
@@ -268,7 +270,7 @@ for test in range(N_tests):
     social_cost_baseline = 0
     for edge in road_graph.edges:
         for t in range(T_simulation):
-            if t >= T_road_blockage:
+            if t >= T_road_blockage and edge in edge_blockage_list:
                 travel_time = blockage_time_factor * road_graph[edge[0]][edge[1]]['travel_time']
                 capacity = blockage_capacity_factor * road_graph[edge[0]][edge[1]]['capacity']
             else:
