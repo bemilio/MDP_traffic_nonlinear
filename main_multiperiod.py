@@ -37,10 +37,10 @@ def generate_graph_with_accident(Road_graph, edge_blockage_list, blockage_time_f
             capacity_roads.update({edge: base_capacity})
             limit_roads.update({edge: base_limit})
             uncontrolled_traffic.update({edge: base_uncontrolled_traffic})  # 1 is the minimum necessary for monotonicity
-    nx.set_edge_attributes(Road_graph, values=travel_time_roads, name='travel_time')
-    nx.set_edge_attributes(Road_graph, values=capacity_roads, name='capacity')
-    nx.set_edge_attributes(Road_graph, values=limit_roads, name='limit_roads')
-    nx.set_edge_attributes(Road_graph, values=uncontrolled_traffic, name='uncontrolled_traffic')
+    nx.set_edge_attributes(Road_graph_blocked, values=travel_time_roads, name='travel_time')
+    nx.set_edge_attributes(Road_graph_blocked, values=capacity_roads, name='capacity')
+    nx.set_edge_attributes(Road_graph_blocked, values=limit_roads, name='limit_roads')
+    nx.set_edge_attributes(Road_graph_blocked, values=uncontrolled_traffic, name='uncontrolled_traffic')
     return Road_graph_blocked
 
 def set_stepsizes(N, road_graph, A_ineq_shared, xi, algorithm='FRB'):
@@ -68,16 +68,16 @@ def set_stepsizes(N, road_graph, A_ineq_shared, xi, algorithm='FRB'):
 if __name__ == '__main__':
     logging.basicConfig(filename='log.txt', filemode='w',level=logging.DEBUG)
     use_test_graph = True
-    N_random_tests = 2
-    N_vehicles_per_agent = 100
-    T_horiz_to_test = [8]
-    T_simulation = 15
+    N_random_tests = 1
+    N_vehicles_per_agent = 1000
+    T_horiz_to_test = [1, 3, 5, 8]
+    T_simulation = 10
     T_road_blockage = 2
-    edge_blockage_list = [(5,6), (5,7)]
-    blockage_time_factor = 2
+    edge_blockage_list = [(5,6), (2,3)]
+    blockage_time_factor = 3
     blockage_capacity_factor = .3
     print("Initializing road graph...")
-    N_agents=4  # N agents
+    N_agents=2  # N agents
     f = open('test_graph_multiperiod.pkl', 'rb')
     Road_graph = pickle.load(f)
     Road_graph_blocked = generate_graph_with_accident(Road_graph, edge_blockage_list, blockage_time_factor, blockage_capacity_factor)
