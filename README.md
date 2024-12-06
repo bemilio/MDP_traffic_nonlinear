@@ -2,7 +2,7 @@ This repository contains the python implementation accompanying the paper:
 
 **Probabilistic game-theoretic traffic routing**  
 *Emilio Benenati, Sergio Grammatico*  
-*IEEE Transactions on intelligent transportation systems, 2023*  
+*IEEE Transactions on intelligent transportation systems, 2024*  
 DOI: [10.1109/TITS.2024.3399112](https://doi.org/10.1109/TITS.2024.3399112)  
 
 ## Description  
