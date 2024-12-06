@@ -38,4 +38,4 @@ python plot_multiperiod.py
 ```
 
 
-In the simulation section of the referenced paper paper, the results are obtained by running the code multiple times with randomized parameters and initial condition (see paper for details). The generated data used in the paper is available at [this link](...)
+In the simulation section of the referenced paper paper, the results are obtained by running the code multiple times with randomized parameters and initial condition (see paper for details). The generated data used in the paper is available with DOI: `10.4121/dbbfecf5-a6a3-4077-968e-11c3681f4a93`
