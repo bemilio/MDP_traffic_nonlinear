@@ -22,6 +22,7 @@ python create_test_graph.py
 ```
 python main.py
 ```
+- Store the resulting saved file in a folder and update [this line](https://github.com/bemilio/MDP_traffic_nonlinear/blob/6b4e42e28fe73048ae0431b096b808a14e5eecd2/plot.py#L30) accordingly
 - Plot offline routing solution
 ```
 python plot.py
@@ -30,9 +31,11 @@ python plot.py
 ```
 python main_multiperiod.py
 ```
+- Store the resulting saved file in a folder and update [this line](https://github.com/bemilio/MDP_traffic_nonlinear/blob/6b4e42e28fe73048ae0431b096b808a14e5eecd2/plot_multiperiod.py#L30) accordingly
 - Plot results of the receding horizon solution
 ```
 python plot_multiperiod.py
 ```
+
 
 In the simulation section of the referenced paper paper, the results are obtained by running the code multiple times with randomized parameters and initial condition (see paper for details). The generated data used in the paper is available at [this link](...)
