@@ -1,21 +1,32 @@
-# Probabilistic game-theoretic traffic routing
-This is the code associated to the paper "Probabilistic game-theoretic traffic routing" - E. Benenati and S. Grammatico, 2022 (under revision).
+This repository contains the python implementation accompanying the paper:  
 
-This code solves for the Nash equilibrium routing solution for a fleet of vehicles. To run the code:
+**Probabilistic game-theoretic traffic routing**  
+*Emilio Benenati, Sergio Grammatico*  
+*IEEE Transactions on intelligent transportation systems, 2023*  
+DOI: [10.1109/TITS.2024.3399112](https://doi.org/10.1109/TITS.2024.3399112)  
+
+## Description  
+This code solves for the Nash equilibrium routing solution for a fleet of vehicles. The solution can either be computed offline, or offline via a receding-horizon controller.
+
+## Dependencies  
+See `requirements.txt`
+
+## Running the code
+To execute the code:
 
 - Create the test graph
 ```
 python create_test_graph.py
 ```
-- Pre-compute complete routing solution
+- Compute offline routing solution
 ```
 python main.py
 ```
-- Plot results
+- Plot offline routing solution
 ```
 python plot.py
 ```
-- Receding-horizon routing solution
+- Compute receding-horizon routing solution
 ```
 python main_multiperiod.py
 ```
@@ -23,3 +34,5 @@ python main_multiperiod.py
 ```
 python plot_multiperiod.py
 ```
+
+In the simulation section of the referenced paper paper, the results are obtained by running the code multiple times with randomized parameters and initial condition (see paper for details). The generated data used in the paper is available at [this link](...)
