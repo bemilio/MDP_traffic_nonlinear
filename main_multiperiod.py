@@ -10,39 +10,6 @@ import sys
 
 from operator import itemgetter
 
-
-def generate_graph_with_accident(Road_graph, edge_blockage_list, blockage_time_factor, blockage_capacity_factor):
-    Road_graph_blocked = Road_graph.copy()
-    travel_time_roads = {}
-    capacity_roads = {}
-    limit_roads = {}
-    uncontrolled_traffic = {}
-    base_travel_time = Road_graph[0][1]['travel_time']
-    base_capacity = Road_graph[0][1]['capacity']
-    base_limit = Road_graph[0][1]['limit_roads']
-    base_uncontrolled_traffic = Road_graph[0][1]['uncontrolled_traffic']
-    for edge in Road_graph.edges:
-        if edge[0] == edge[1]:
-            travel_time_roads.update({edge: 0})
-            capacity_roads.update({edge: np.infty})
-            limit_roads.update({edge: np.infty})
-            uncontrolled_traffic.update({edge: 0})
-        elif edge in edge_blockage_list:
-            travel_time_roads.update({edge: base_travel_time * blockage_time_factor})
-            capacity_roads.update({edge: base_capacity * blockage_capacity_factor})
-            limit_roads.update({edge: base_limit})
-            uncontrolled_traffic.update({edge: base_uncontrolled_traffic})
-        else:
-            travel_time_roads.update({edge: base_travel_time})
-            capacity_roads.update({edge: base_capacity})
-            limit_roads.update({edge: base_limit})
-            uncontrolled_traffic.update({edge: base_uncontrolled_traffic})  # 1 is the minimum necessary for monotonicity
-    nx.set_edge_attributes(Road_graph_blocked, values=travel_time_roads, name='travel_time')
-    nx.set_edge_attributes(Road_graph_blocked, values=capacity_roads, name='capacity')
-    nx.set_edge_attributes(Road_graph_blocked, values=limit_roads, name='limit_roads')
-    nx.set_edge_attributes(Road_graph_blocked, values=uncontrolled_traffic, name='uncontrolled_traffic')
-    return Road_graph_blocked
-
 def set_stepsizes(N, road_graph, A_ineq_shared, xi, algorithm='FRB'):
     theta = 0
     c = road_graph.edges[(0, 1)]['capacity']
@@ -68,21 +35,17 @@ def set_stepsizes(N, road_graph, A_ineq_shared, xi, algorithm='FRB'):
 if __name__ == '__main__':
     logging.basicConfig(filename='log.txt', filemode='w',level=logging.DEBUG)
     use_test_graph = True
-    N_random_tests = 1
+    N_random_tests = 100
     N_vehicles_per_agent = 1000
-    T_horiz_to_test = [1, 3, 5, 8]
-    T_simulation = 10
-    T_road_blockage = 2
-    edge_blockage_list = [(5,6), (2,3)]
-    blockage_time_factor = 3
-    blockage_capacity_factor = .3
     print("Initializing road graph...")
-    N_agents=2  # N agents
+    N_agents=8   # N agents
     f = open('test_graph_multiperiod.pkl', 'rb')
     Road_graph = pickle.load(f)
-    Road_graph_blocked = generate_graph_with_accident(Road_graph, edge_blockage_list, blockage_time_factor, blockage_capacity_factor)
     f.close()
+    T_horiz_to_test= [1,3,4,5,8]
+    T_simulation=10
     xi = 1. # exponent BPT congestion function
+
     n_juncs = len(Road_graph.nodes)
     print("Done")
     print("Running simulation with ", n_juncs," nodes and", N_agents," agents")
@@ -130,10 +93,7 @@ if __name__ == '__main__':
             for t in range(T_simulation):
                 print("Initializing game for timestep " + str(t+1) + " out of " + str(T_simulation))
                 logging.info("Initializing game for timestep " + str(t+1) + " out of " + str(T_simulation))
-                if t>=T_road_blockage:
-                    game = Game(T_horiz, N_agents, Road_graph_blocked, initial_state, final_destinations, receding_horizon=True, xi=xi)
-                else:
-                    game = Game(T_horiz, N_agents, Road_graph, initial_state, final_destinations, receding_horizon=True, xi=xi)
+                game = Game(T_horiz, N_agents, Road_graph, initial_state, final_destinations, receding_horizon=True, xi=xi)
                 if t==0:
                     print("The game has " + str(N_agents) + " agents; " + str(
                         game.n_opt_variables) + " opt. variables per agent; " \
@@ -199,9 +159,7 @@ if __name__ == '__main__':
                 # Compute baselines
                 if t==0 and T_horiz==T_horiz_to_test[0]:
                     # First baseline: shortest path
-                    congestion_baseline_instance, cost_baseline_instance = game.compute_baseline(initial_junctions, final_destinations,
-                         T_road_blockage=T_road_blockage, edge_blockage_list=edge_blockage_list,
-                         blockage_time_factor=blockage_time_factor, blockage_capacity_factor=blockage_capacity_factor) # Compute cost of naive shortest path
+                    congestion_baseline_instance, cost_baseline_instance = game.compute_baseline(initial_junctions, final_destinations) # Compute cost of naive shortest path
                     congestion_baseline.update({test : congestion_baseline_instance})
                     cost_baseline.update({test : cost_baseline_instance.flatten(0)})
                     # Second baseline: non-receding horizon solution (one shot solution)
@@ -234,8 +192,7 @@ if __name__ == '__main__':
     filename = "saved_test_result_multiperiod_" + str(job_id) + ".pkl"
     f = open(filename, 'wb')
     pickle.dump([ x_store, x_oneshot_store, visited_nodes, Road_graph, edge_time_to_index_oneshot, node_time_to_index_oneshot, T_horiz_to_test, T_simulation, \
-                 initial_junctions_stored, final_destinations_stored, congestion_baseline, cost_baseline, N_random_tests,
-                 T_road_blockage, edge_blockage_list, blockage_time_factor, blockage_capacity_factor], f)
+                 initial_junctions_stored, final_destinations_stored, congestion_baseline, cost_baseline, N_random_tests], f)
     f.close()
     print("Saved")
     logging.info("Saved, job done")
